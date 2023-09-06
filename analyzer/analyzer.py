@@ -2,7 +2,6 @@
 from chess import WHITE, BLACK
 from chess.engine import SimpleEngine, Limit
 from chess.pgn import read_game
-import random
 from collections import OrderedDict
 
 def make_engine():
@@ -10,7 +9,8 @@ def make_engine():
     engine = SimpleEngine.popen_uci('stockfish')
     engine.configure({'UCI_LimitStrength': True})
     engine.configure({'UCI_Elo': elo})
-    limit = Limit(time=0.1)
+    engine.configure({'Threads': 4})
+    limit = Limit(time=0.001)
     return engine, elo, limit
 
 def get_game_accuracy():

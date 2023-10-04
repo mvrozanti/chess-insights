@@ -1,0 +1,3 @@
+def analyze(games):
+    pass
+        

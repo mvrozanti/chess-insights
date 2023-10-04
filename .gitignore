@@ -1,1 +1,4 @@
+.vscode
+analyzer/__pycache__
 *.pgn
+analyzer/data

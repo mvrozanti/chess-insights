@@ -1,14 +1,9 @@
 #!/usr/bin/env python
-from chess import WHITE, BLACK
-from io import StringIO
-from chess.pgn import read_game
 from datetime import datetime
 import argparse
 from downloader import download_all
 from db import make_db
 import sys
-from util import get_game_datetime, hash_pgn
-from engine import make_engine
 
 db = make_db()
 

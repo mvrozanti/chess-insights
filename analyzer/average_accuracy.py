@@ -1,15 +1,41 @@
+
 from chess import WHITE, BLACK
-from collections import OrderedDict
-from engine import make_engine
-from db import make_db
-from io import StringIO
 from chess.pgn import read_game
-from tqdm import tqdm
-import sys
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from db import make_db
+from engine import make_engine
+from functools import partial
+from io import StringIO
+from pymongo.errors import DuplicateKeyError
+from tqdm import tqdm
+from util import hash_pgn
+from remote_engine import is_remote_available, set_remote_available
+import sys
+import time
+
+def evaluate_move(board, engine, move, limit):
+    info = engine.analyse(board, limit, root_moves=[move], multipv=1)
+    try:
+        value = info[0]['score'].relative.cp
+    except:
+        value = 10000 - info[0]['score'].relative.mate()
+        if info[0]['score'].relative.mate() < 0:
+            value = -value
+    return value
+
+def fetch_evaluation_from_db(db, fen, move):
+    return db.move_analyses.find_one({'fen': fen, 'move': move.uci()})
+
+def fetch_move_accuracy_from_db(db, hexdigest, username):
+    return db.move_accuracy_pgn_username.find_one({'hexdigest': hexdigest, 'username': username})
 
 def get_move_accuracy(pgn, username):
-    engine, limit = make_engine()
+    db = make_db()
+    move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
+    if move_accuracy_from_db and 'move_accuracy' in move_accuracy_from_db:
+        return move_accuracy_from_db['move_accuracy']
+    engine, limit, is_remote_engine = make_engine()
     move_accuracy = []
     game = read_game(StringIO(pgn))
     board = game.board()
@@ -22,13 +48,18 @@ def get_move_accuracy(pgn, username):
             continue
         moves = {}
         for legal_move in board.legal_moves:
-            info = engine.analyse(board, limit, root_moves=[legal_move], multipv=1)
-            try:
-                value = info[0]['score'].relative.cp
-            except:
-                e = 10000 - info[0]['score'].relative.mate()
-                if info[0]['score'].relative.mate() < 0:
-                    value = -value
+            fen = board.fen()
+            eval_from_db = fetch_evaluation_from_db(db, fen, legal_move)
+            value = eval_from_db['evaluation'] if eval_from_db is not None else evaluate_move(board, engine, legal_move, limit)
+            move_analysis = {
+                    'fen': fen,
+                    'move': legal_move.uci(),
+                    'evaluation': value,
+                    'evalVersion': 1,
+                    'gameHexdigest': hash_pgn(pgn)
+                }
+            if eval_from_db is None and legal_move == actual_move:
+                db.move_analyses.insert_one(move_analysis)
             if value not in moves:
                 moves[value] = []
             moves[value].append(legal_move)
@@ -42,12 +73,23 @@ def get_move_accuracy(pgn, username):
         raw_move_accuracy = (legal_move_count - actual_move_rank)/legal_move_count
         move_accuracy.append(raw_move_accuracy)
         board.push(actual_move)
+    db.move_accuracy_pgn_username.insert_one({
+        'hexdigest': hash_pgn(pgn),
+        'username': username,
+        'move_accuracy': move_accuracy
+    })
     engine.close()
+    if is_remote_engine:
+        set_remote_available(True)
     return move_accuracy
 
-def game_generator(db, filter):
-    for game_document in db.games.find(filter).limit(60):
-        yield game_document
+def make_game_generator(db, filter):
+    cursor = db.games.find(filter).batch_size(10)
+    try:
+        for game_document in cursor:
+            yield game_document
+    finally:
+        cursor.close()
 
 def run(args):
     username = args.username
@@ -57,17 +99,39 @@ def run(args):
     filter = {'username': username}
     game_accuracies = []
     game_count = db.games.count_documents(filter)
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        with tqdm(total=game_count) as pbar:
-            futures = [executor.submit(get_move_accuracy, game_document['pgn'], username) for game_document in game_generator(db, filter)]
-            for future in as_completed(futures):
-                move_accuracy = future.result()
-                game_accuracy = sum(move_accuracy) / len(move_accuracy)
-                game_accuracies += [game_accuracy]
+    game_generator = make_game_generator(db, filter)
+    CONCURRENCY = 16 # rule of thumb: at most, number of logical cores
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+        with tqdm(total=game_count, smoothing=False) as pbar:
+            active_threads = set()
+            def pop_future1(game_accuracies, future):
+                try:
+                    move_accuracy = future.result()
+                    if len(move_accuracy) != 0:
+                        game_accuracy = sum(move_accuracy) / len(move_accuracy)
+                        game_accuracies += [game_accuracy]
+                except Exception as e:
+                    if 'engine process died' not in str(e):
+                        print(e)
+                active_threads.remove(future)
                 pbar.update(1)
-            if not game_accuracies:
-                print(f'No games found in the database for {username}', file=sys.stderr)
-                return None
-            average_accuracy = sum(game_accuracies) / len(game_accuracies)
-            print('Average accuracy:', average_accuracy)
-            return average_accuracy
+            pop_future2 = partial(pop_future1, game_accuracies)
+            while True:
+                try:
+                    while len(active_threads) == CONCURRENCY:
+                        time.sleep(0.1)
+                    game_document = next(game_generator)
+                    pbar.set_description(f'Analyzing {game_document["hexdigest"]}')
+                    future = executor.submit(get_move_accuracy, game_document['pgn'], username)
+                    active_threads.add(future)
+                    future.add_done_callback(pop_future2)
+                except StopIteration:
+                    break
+        while len(active_threads) > 0:
+            time.sleep(0.1)
+        if not game_accuracies:
+            print(f'No games found in the database for {username}', file=sys.stderr)
+            return None
+        average_accuracy = sum(game_accuracies) / len(game_accuracies)
+        print(f'Average accuracy: {average_accuracy*100:.2f}%')
+        return average_accuracy

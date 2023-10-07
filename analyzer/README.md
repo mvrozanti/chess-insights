@@ -1,3 +1,5 @@
+## Features
+
 * Date filters for every query
 
 - [x] Average accuracy
@@ -37,3 +39,10 @@
 - [] Draw offers accepted when its due
 
 - [ ] Queen trade accuracy (?)
+
+- Draws by agreement by country
+
+## Performance
+
+- [ ] [Add Syzygy tables](https://chess.massimilianogoi.com/download/tablebases/Syzygy3-4-5/download.php)
+- [ ] Server/Client

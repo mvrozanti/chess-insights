@@ -4,11 +4,8 @@ services:
     command: mongod --quiet --logpath /dev/null
     image: mongo:latest
     ports:
-      - '27017:27017'
+      - '127.0.0.1:27017:27017'
     volumes:
       - data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo
-      MONGO_INITDB_ROOT_PASSWORD: chess-playground
 volumes:
   data:

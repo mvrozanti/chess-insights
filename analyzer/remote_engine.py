@@ -18,8 +18,8 @@ def set_remote_available(availability):
         remote_lock.acquire()
 
 def make_remote():
+    set_remote_available(False)
     limit = Limit(time=0.001)
     engine = SimpleEngine.popen_uci(['ssh', 'opc@oracle', 'stockfish'])
     engine.configure({'Threads': 2, 'Hash': 32})
-    set_remote_available(False)
     return engine, limit, True

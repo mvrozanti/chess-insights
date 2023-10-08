@@ -42,12 +42,12 @@ def make_game_generator(db, _filter):
     finally:
         cursor.close()
 
-def get_move_accuracy_for_game(pgn, username):
+def get_move_accuracy_for_game(pgn, username, remote_engine):
     db = make_db()
     move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
     if move_accuracy_from_db:
         return move_accuracy_from_db
-    engine, is_remote_engine = make_engine()
+    engine, is_remote_engine = make_engine(remote=remote_engine)
     move_accuracy = []
     game = read_game(StringIO(pgn))
     board = game.board()

@@ -12,7 +12,7 @@ from common.util import get_game_datetime, hash_pgn
 db = make_db()
 
 def download_month(username, year, month):
-    formatted_month = f'0{month}'if month < 10 else month
+    formatted_month = f'0{month}' if month < 10 else month
     url = f'http://api.chess.com/pub/player/{username}/games/{year}/{formatted_month}/pgn'
     headers = {
             'Content-type': 'text/plain',

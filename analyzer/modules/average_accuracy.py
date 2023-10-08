@@ -37,7 +37,9 @@ def run(args):
                     game_document = next(game_generator)
                     pbar.set_description(f'Analyzing {game_document["hexdigest"]}')
                     future = executor.submit(get_move_accuracy_for_game,
-                                             game_document['pgn'], username)
+                                             game_document['pgn'],
+                                             username,
+                                             args.remote_engine)
                     active_threads.add(future)
                     future.add_done_callback(pop_future2)
                 except StopIteration:
@@ -54,6 +56,11 @@ def run(args):
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(
         action_name, help='Calculates average accuracy for a user')
+    average_accuracy_parser.add_argument(
+        '-r',
+        '--remote-engine',
+        help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
+    )
     average_accuracy_parser.add_argument(
         '-u',
         '--username',

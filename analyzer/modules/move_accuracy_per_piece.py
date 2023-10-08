@@ -53,9 +53,9 @@ def run(args):
         print(f'{piece}: {accuracy*100:.2f}%')
 
 def add_subparser(action_name, subparsers):
-    average_accuracy_parser = subparsers.add_parser(
+    move_accuracy_per_piece_parser = subparsers.add_parser(
         action_name, help='Calculates average accuracy per piece for a user')
-    average_accuracy_parser.add_argument(
+    move_accuracy_per_piece_parser.add_argument(
         '-u',
         '--username',
         required=True

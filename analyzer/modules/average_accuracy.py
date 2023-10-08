@@ -5,8 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from tqdm import tqdm
 
-from db import make_db
-from util import make_game_generator, get_move_accuracy_for_game
+from common.db import make_db
+from common.util import make_game_generator, get_move_accuracy_for_game
 
 CONCURRENCY = 8 # rule of thumb: at most, number of physical cores
 

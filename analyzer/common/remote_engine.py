@@ -1,5 +1,5 @@
 from threading import Lock
-from chess.engine import SimpleEngine, Limit
+from chess.engine import SimpleEngine
 
 remote_lock = Lock()
 
@@ -14,7 +14,6 @@ def set_remote_available(availability):
 
 def make_remote():
     set_remote_available(False)
-    limit = Limit(time=0.001)
     engine = SimpleEngine.popen_uci(['ssh', 'opc@oracle', 'stockfish'])
     engine.configure({'Threads': 2, 'Hash': 32})
-    return engine, limit, True
+    return engine, True

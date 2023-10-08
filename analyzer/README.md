@@ -4,8 +4,8 @@
 
 - [x] Average accuracy
 - [ ] Average accuracy of actual move (h4, g4, b4 come to mind...)
-- [ ] Average accuracy by piece type (pawn, knight, bishop, rook, queen)
-- [ ] Average move frequency by piece
+- [x] Average accuracy by piece type (pawn, knight, bishop, rook, queen)
+- [x] Average move frequency by piece
 - [ ] Castling statistics on same side or opposite sides when playing white/black
 - [ ] Chart containing the opening repertoire breakdown 
 - [ ] Most common endgame types (e.g., rook vs. pawn, queen vs. rook, etc.)
@@ -39,10 +39,3 @@
 - [] Draw offers accepted when its due
 
 - [ ] Queen trade accuracy (?)
-
-- Draws by agreement by country
-
-## Performance
-
-- [ ] [Add Syzygy tables](https://chess.massimilianogoi.com/download/tablebases/Syzygy3-4-5/download.php)
-- [ ] Server/Client

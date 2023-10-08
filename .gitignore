@@ -1,6 +1,5 @@
 .vscode
-analyzer/__pycache__
-*.pgn
-analyzer/data
+**/__pycache__
+**/*.pgn
 3-4-5
 **/.fuse*

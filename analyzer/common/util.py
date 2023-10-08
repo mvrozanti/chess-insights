@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import hashlib
 from io import StringIO
 from datetime import datetime
@@ -9,12 +8,12 @@ from chess import WHITE, BLACK
 from chess.pgn import read_game
 from chess.engine import INFO_SCORE, EngineTerminatedError
 
-from engine import make_engine
-from remote_engine import set_remote_available
-from db import make_db
+from .engine import make_engine, limit
+from .remote_engine import set_remote_available
+from .db import make_db
 
-def evaluate_move(board, engine, move, limit):
-    info = engine.analyse(board, limit, root_moves=[move], multipv=1, info=INFO_SCORE)
+def evaluate_move(board, engine, move):
+    info = engine.analyse(board, limit(), root_moves=[move], multipv=1, info=INFO_SCORE)
     relative_eval = info[0]['score'].relative
     if relative_eval.is_mate():
         value = 10000 - info[0]['score'].relative.mate()
@@ -28,7 +27,9 @@ def fetch_evaluation_from_db(db, fen, move):
     return db.move_analyses.find_one({'fen': fen, 'move': move.uci()})
 
 def fetch_move_accuracy_from_db(db, hexdigest, username):
-    return db.move_accuracy_pgn_username.find_one({'hexdigest': hexdigest, 'username': username})
+    _filter = {'hexdigest': hexdigest, 'username': username}
+    move_accuracy = db.move_accuracy_pgn_username.find_one(_filter)
+    return move_accuracy['move_accuracy'] if move_accuracy else None
 
 def hash_pgn(pgn):
     return hashlib.md5(pgn.encode('utf-8')).hexdigest()
@@ -41,13 +42,12 @@ def make_game_generator(db, _filter):
     finally:
         cursor.close()
 
-
 def get_move_accuracy_for_game(pgn, username):
     db = make_db()
     move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
-    if move_accuracy_from_db and 'move_accuracy' in move_accuracy_from_db:
-        return move_accuracy_from_db['move_accuracy']
-    engine, limit, is_remote_engine = make_engine()
+    if move_accuracy_from_db:
+        return move_accuracy_from_db
+    engine, is_remote_engine = make_engine()
     move_accuracy = []
     game = read_game(StringIO(pgn))
     board = game.board()
@@ -57,7 +57,7 @@ def get_move_accuracy_for_game(pgn, username):
             board.push(actual_move)
             continue
         try:
-            raw_move_accuracy = get_move_accuracy(db, board, engine, limit, actual_move, pgn)
+            raw_move_accuracy = get_move_accuracy(db, board, engine, actual_move, pgn)
             move_accuracy.append(raw_move_accuracy)
             board.push(actual_move)
         except EngineTerminatedError as e:
@@ -78,17 +78,16 @@ def get_move_accuracy_for_game(pgn, username):
     return move_accuracy
 
 
-def get_move_accuracy(db, board, engine, limit, actual_move, pgn):
+def get_move_accuracy(db, board, engine, actual_move, pgn):
     moves = {}
     for legal_move in board.legal_moves:
-        fen = board.fen()
-        eval_from_db = fetch_evaluation_from_db(db, fen, legal_move)
+        eval_from_db = fetch_evaluation_from_db(db, board.fen(), legal_move)
         if eval_from_db is not None:
             value = eval_from_db['evaluation']
         else:
-            value = evaluate_move(board, engine, legal_move, limit)
+            value = evaluate_move(board, engine, legal_move)
         move_analysis = {
-                'fen': fen,
+                'fen': board.fen(),
                 'move': legal_move.uci(),
                 'evaluation': value,
                 'evalVersion': 1,

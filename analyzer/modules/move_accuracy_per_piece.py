@@ -6,8 +6,8 @@ from chess import WHITE, BLACK
 from chess.pgn import read_game
 from tqdm import tqdm
 
-from util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn
-from db import make_db
+from common.util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn
+from common.db import make_db
 
 def get_piece_type(board, move):
     piece = re.sub('[^A-Z]', '', board.san(move))
@@ -16,9 +16,7 @@ def get_piece_type(board, move):
 def get_piece_accuracy_for_game(db, pgn, username):
     piece_accuracy = {}
     move_accuracy = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
-    if move_accuracy:
-        move_accuracy = move_accuracy['move_accuracy']
-    else:
+    if not move_accuracy:
         return {}
     game = read_game(StringIO(pgn))
     board = game.board()
@@ -28,7 +26,7 @@ def get_piece_accuracy_for_game(db, pgn, username):
             board.push(actual_move)
             continue
         piece_type = get_piece_type(board, actual_move)
-        if piece_type not in move_accuracy:
+        if piece_type not in piece_accuracy:
             piece_accuracy[piece_type] = []
         piece_accuracy[piece_type] += [move_accuracy[actual_move_idx//2]]
         board.push(actual_move)

@@ -1,13 +1,13 @@
-#!/usr/bin/env python
 from datetime import datetime
 from tqdm import tqdm
 from pymongo.errors import DuplicateKeyError
 import requests
+import math
 
 from dateutil.relativedelta import relativedelta
 
-from db import make_db
-from util import get_game_datetime, hash_pgn
+from common.db import make_db
+from common.util import get_game_datetime, hash_pgn
 
 db = make_db()
 
@@ -55,6 +55,8 @@ def run(args):
                     db.games.insert_one(game_document)
                 except DuplicateKeyError:
                     break
+            if len(all_pgns) > args.limit:
+                return all_pgns
             cursor_date = cursor_date - relativedelta(months=1)
             pbar.update(1)
     print(f'Downloaded {len(all_pgns)} games')
@@ -67,4 +69,10 @@ def add_subparser(action_name, subparsers):
         '-u',
         '--username',
         required=True
+    )
+    downloader_parser.add_argument(
+        '-l',
+        '--limit',
+        default=math.inf,
+        type=int
     )

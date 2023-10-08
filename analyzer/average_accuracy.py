@@ -8,7 +8,7 @@ from tqdm import tqdm
 from db import make_db
 from util import make_game_generator, get_move_accuracy_for_game
 
-CONCURRENCY = 16 # rule of thumb: at most, number of logical cores
+CONCURRENCY = 8 # rule of thumb: at most, number of physical cores
 
 def run(args):
     username = args.username
@@ -23,14 +23,10 @@ def run(args):
         with tqdm(total=game_count, smoothing=False) as pbar:
             active_threads = set()
             def pop_future1(game_accuracies, future):
-                try:
-                    move_accuracy = future.result()
-                    if len(move_accuracy) != 0:
-                        game_accuracy = sum(move_accuracy) / len(move_accuracy)
-                        game_accuracies += [game_accuracy]
-                except Exception as e:
-                    if 'engine process died' not in str(e):
-                        print(e)
+                move_accuracy = future.result()
+                if len(move_accuracy) != 0:
+                    game_accuracy = sum(move_accuracy) / len(move_accuracy)
+                    game_accuracies += [game_accuracy]
                 active_threads.remove(future)
                 pbar.update(1)
             pop_future2 = partial(pop_future1, game_accuracies)

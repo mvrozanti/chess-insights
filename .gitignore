@@ -3,4 +3,4 @@ analyzer/__pycache__
 *.pgn
 analyzer/data
 3-4-5
-.fuse*
+**/.fuse*

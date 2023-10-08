@@ -3,22 +3,25 @@ import hashlib
 from io import StringIO
 from datetime import datetime
 from collections import OrderedDict
+import sys
 
 from chess import WHITE, BLACK
 from chess.pgn import read_game
+from chess.engine import INFO_SCORE, EngineTerminatedError
 
 from engine import make_engine
 from remote_engine import set_remote_available
 from db import make_db
 
 def evaluate_move(board, engine, move, limit):
-    info = engine.analyse(board, limit, root_moves=[move], multipv=1)
-    try:
-        value = info[0]['score'].relative.cp
-    except:
+    info = engine.analyse(board, limit, root_moves=[move], multipv=1, info=INFO_SCORE)
+    relative_eval = info[0]['score'].relative
+    if relative_eval.is_mate():
         value = 10000 - info[0]['score'].relative.mate()
         if info[0]['score'].relative.mate() < 0:
             value = -value
+    else:
+        value = relative_eval.cp
     return value
 
 def fetch_evaluation_from_db(db, fen, move):
@@ -48,16 +51,22 @@ def get_move_accuracy_for_game(pgn, username):
     move_accuracy = []
     game = read_game(StringIO(pgn))
     board = game.board()
-    if username not in [game.headers['White'], game.headers['Black']]:
-        raise LookupError(f'{username} not in game {hash_pgn(pgn)}')
     color = WHITE if game.headers['White'] == username else BLACK
     for actual_move in game.mainline_moves():
         if board.turn != color:
             board.push(actual_move)
             continue
-        raw_move_accuracy = get_move_accuracy(db, board, engine, limit, actual_move, pgn)
-        move_accuracy.append(raw_move_accuracy)
-        board.push(actual_move)
+        try:
+            raw_move_accuracy = get_move_accuracy(db, board, engine, limit, actual_move, pgn)
+            move_accuracy.append(raw_move_accuracy)
+            board.push(actual_move)
+        except EngineTerminatedError as e:
+            if 'engine process died' not in str(e):
+                print(e)
+                sys.exit(1)
+            elif is_remote_engine:
+                set_remote_available(True)
+            return []
     db.move_accuracy_pgn_username.insert_one({
         'hexdigest': hash_pgn(pgn),
         'username': username,

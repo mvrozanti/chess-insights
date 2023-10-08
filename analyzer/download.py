@@ -57,6 +57,7 @@ def run(args):
                     break
             cursor_date = cursor_date - relativedelta(months=1)
             pbar.update(1)
+    print(f'Downloaded {len(all_pgns)} games')
     return all_pgns
 
 def add_subparser(action_name, subparsers):

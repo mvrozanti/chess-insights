@@ -1,7 +1,5 @@
 import sys
-import math
 from io import StringIO
-import re
 
 from chess import WHITE, BLACK
 from chess.pgn import read_game
@@ -28,32 +26,54 @@ def get_square_accuracy_for_game(db, pgn, username):
         if board.turn != color:
             board.push(actual_move)
             continue
-        dest_square = get_dest_square(board, actual_move)
+        dest_square = get_dest_square(actual_move)
         if dest_square not in square_accuracy:
             square_accuracy[dest_square] = []
         square_accuracy[dest_square] += [move_accuracy[actual_move_idx//2]]
         board.push(actual_move)
     return square_accuracy
 
+def plot_results(square_accuracy, username, actual_game_count):
+    import matplotlib.pyplot as plt
+    chess_board = [[0] * 8 for _ in range(8)]
+    for square, percentage in square_accuracy.items():
+        col = ord(square[0]) - ord('a')
+        row = int(square[1]) - 1
+        chess_board[row][col] = percentage
+    plt.figure(figsize=(8, 8))
+    plt.imshow(chess_board, cmap='YlGnBu', interpolation='nearest', aspect='auto')
+    plt.colorbar(label='Accuracy (%)')
+    plt.title(f'{username}\nSquare accuracy over {actual_game_count} games')
+    plt.xticks(range(8), list('abcdefgh'))
+    plt.yticks(range(8), list('12345678'))
+    plt.gca().invert_yaxis()
+    plt.show()
+
 def run(args):
-    username = args.username
-    if not username:
+    if not args.username:
         print('Username is required', file=sys.stderr)
     db = make_db()
-    _filter = {'username': username}
-    game_count = db.games.count_documents(_filter)
+    _filter = {'username': args.username}
+    game_count = args.limit or db.games.count_documents(_filter)
     square_accuracy = {}
-    for game_document in tqdm(make_game_generator(db, _filter, limit=args.limit), total=game_count):
+    actual_game_count = 0
+    game_generator = make_game_generator(db, _filter, limit=args.limit)
+    for game_document in tqdm(game_generator, total=game_count):
         pgn = game_document['pgn']
-        square_accuracies_for_game = get_square_accuracy_for_game(db, pgn, username)
+        square_accuracies_for_game = get_square_accuracy_for_game(db, pgn, args.username)
         for square, accuracies in square_accuracies_for_game.items():
             if square not in square_accuracy:
                 square_accuracy[square] = []
             square_accuracy[square] += accuracies
+        if square_accuracies_for_game:
+            actual_game_count += 1
     for square, accuracies in square_accuracy.items():
         square_accuracy[square] = sum(accuracies)/len(accuracies)
-    for square, accuracy in square_accuracy.items():
-        print(f'{square}: {accuracy*100:.2f}%')
+    if args.plot:
+        plot_results(square_accuracy, args.username, actual_game_count)
+    else:
+        for square, accuracy in square_accuracy.items():
+            print(f'{square}: {accuracy*100:.2f}%')
 
 def add_subparser(action_name, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(
@@ -64,9 +84,13 @@ def add_subparser(action_name, subparsers):
         required=True
     )
     move_accuracy_per_piece_parser.add_argument(
+        '-p',
+        '--plot',
+        action='store_true'
+    )
+    move_accuracy_per_piece_parser.add_argument(
         '-l',
         '--limit',
-        default=math.inf,
         type=int,
         help='limit of games to handle'
     )

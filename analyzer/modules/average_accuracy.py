@@ -17,8 +17,8 @@ def run(args):
     db = make_db()
     _filter = {'username': username}
     game_accuracies = []
-    game_count = db.games.count_documents(_filter)
-    game_generator = make_game_generator(db, _filter)
+    game_count = args.limit or db.games.count_documents(_filter)
+    game_generator = make_game_generator(db, _filter, limit=args.limit)
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
         with tqdm(total=game_count, smoothing=False) as pbar:
             active_threads = set()
@@ -44,7 +44,7 @@ def run(args):
                     future.add_done_callback(pop_future2)
                 except StopIteration:
                     break
-        db.close()
+        db.client.close()
         while len(active_threads) > 0:
             time.sleep(0.1)
         if not game_accuracies:
@@ -66,4 +66,10 @@ def add_subparser(action_name, subparsers):
         '-u',
         '--username',
         required=True
+    )
+    average_accuracy_parser.add_argument(
+        '-l',
+        '--limit',
+        type=int,
+        help='limit of games to handle'
     )

@@ -12,6 +12,11 @@ db = make_db()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='analyzer', description='Chess Analyzer')
+    parser.add_argument(
+        '-p',
+        '--profile',
+        action='store_true'
+    )
     subparsers = parser.add_subparsers(dest='command', required=True)
     for filename in os.listdir(MODULES_DIRECTORY):
         if filename.endswith('.py'):

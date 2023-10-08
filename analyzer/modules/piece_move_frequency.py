@@ -11,7 +11,7 @@ from common.db import make_db
 
 def get_piece_type(board, move):
     piece = re.sub('[^A-Z]', '', board.san(move))
-    return piece if piece else 'p'
+    return piece if piece else 'P'
 
 def get_piece_frequency_for_game(pgn, username):
     piece_frequency = {}
@@ -48,7 +48,7 @@ def run(args):
     total_sum = sum(piece_frequency.values())
     proportions = {key: value / total_sum for key, value in piece_frequency.items()}
     for piece, proportion in proportions.items():
-        print(f'{piece}: {proportion*100:.2f}%')    
+        print(f'{piece}: {proportion*100:.2f}%')
 
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(

@@ -74,5 +74,6 @@ def add_subparser(action_name, subparsers):
         '-l',
         '--limit',
         default=math.inf,
-        type=int
+        type=int,
+        help='limit of games to handle'
     )

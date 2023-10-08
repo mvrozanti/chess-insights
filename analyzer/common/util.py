@@ -34,8 +34,10 @@ def fetch_move_accuracy_from_db(db, hexdigest, username):
 def hash_pgn(pgn):
     return hashlib.md5(pgn.encode('utf-8')).hexdigest()
 
-def make_game_generator(db, _filter):
+def make_game_generator(db, _filter, limit=None):
     cursor = db.games.find(_filter).batch_size(10)
+    if limit is not None:
+        cursor = cursor.limit(limit)
     try:
         for game_document in cursor:
             yield game_document
@@ -72,6 +74,7 @@ def get_move_accuracy_for_game(pgn, username, remote_engine):
         'username': username,
         'move_accuracy': move_accuracy
     })
+    db.client.close()
     engine.close()
     if is_remote_engine:
         set_remote_available(True)

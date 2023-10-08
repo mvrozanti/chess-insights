@@ -44,6 +44,7 @@ def run(args):
                     future.add_done_callback(pop_future2)
                 except StopIteration:
                     break
+        db.close()
         while len(active_threads) > 0:
             time.sleep(0.1)
         if not game_accuracies:

@@ -1,13 +1,12 @@
 import re
 import sys
 from io import StringIO
-import math
 
 from chess import WHITE, BLACK
 from chess.pgn import read_game
 from tqdm import tqdm
 
-from common.util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn
+from common.util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn, count_user_games
 from common.db import make_db
 
 def get_piece_type(board, move):
@@ -38,10 +37,9 @@ def run(args):
     if not username:
         print('Username is required', file=sys.stderr)
     db = make_db()
-    _filter = {'username': username}
-    game_count = db.games.count_documents(_filter)
+    game_count = count_user_games(db, args)
     piece_accuracy = {}
-    for game_document in tqdm(make_game_generator(db, _filter), total=game_count):
+    for game_document in tqdm(make_game_generator(db, args), total=game_count):
         pgn = game_document['pgn']
         piece_accuracies_for_game = get_piece_accuracy_for_game(db, pgn, username)
         for piece_type, accuracies in piece_accuracies_for_game.items():
@@ -55,16 +53,4 @@ def run(args):
 
 def add_subparser(action_name, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(
-        action_name, help='Calculates average accuracy per piece for a user')
-    move_accuracy_per_piece_parser.add_argument(
-        '-u',
-        '--username',
-        required=True
-    )
-    move_accuracy_per_piece_parser.add_argument(
-        '-l',
-        '--limit',
-        default=math.inf,
-        type=int,
-        help='limit of games to handle'
-    )
+        action_name, help='calculates average accuracy per piece for a user')

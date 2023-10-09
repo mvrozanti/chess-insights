@@ -6,7 +6,7 @@ from chess import WHITE, BLACK
 from chess.pgn import read_game
 from tqdm import tqdm
 
-from common.util import make_game_generator
+from common.util import make_game_generator, count_user_games
 from common.db import make_db
 
 def get_piece_type(board, move):
@@ -34,10 +34,9 @@ def run(args):
     if not username:
         print('Username is required', file=sys.stderr)
     db = make_db()
-    _filter = {'username': username}
-    game_count = db.games.count_documents(_filter)
+    game_count = count_user_games(db, args)
     piece_frequency = {}
-    for game_document in tqdm(make_game_generator(db, _filter), total=game_count):
+    for game_document in tqdm(make_game_generator(db, args), total=game_count):
         pgn = game_document['pgn']
         piece_frequencies_for_game = get_piece_frequency_for_game(pgn, username)
         for piece_type, frequency in piece_frequencies_for_game.items():
@@ -52,9 +51,4 @@ def run(args):
 
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(
-        action_name, help='Calculates piece move frequency proportions')
-    average_accuracy_parser.add_argument(
-        '-u',
-        '--username',
-        required=True
-    )
+        action_name, help='calculates piece move frequency proportions')

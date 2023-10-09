@@ -1,3 +1,5 @@
 python-chess
 pymongo
 tqdm
+pandas
+numpy

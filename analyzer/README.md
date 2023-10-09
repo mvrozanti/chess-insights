@@ -3,8 +3,10 @@
 * Date filters for every query
 
 - [x] Average accuracy
-- [ ] Average accuracy of actual move (h4, g4, b4 come to mind...)
+- [x] Average accuracy of actual move (h4, g4, b4 come to mind...)
 - [x] Average accuracy by piece type (pawn, knight, bishop, rook, queen)
+- [x] Opening win/loss stats
+- [ ] Average accuracy by opening
 - [x] Average move frequency by piece
 - [ ] Castling statistics on same side or opposite sides when playing white/black
 - [ ] Chart containing the opening repertoire breakdown 
@@ -39,3 +41,5 @@
 - [] Draw offers accepted when its due
 
 - [ ] Queen trade accuracy (?)
+
+

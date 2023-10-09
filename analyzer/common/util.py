@@ -34,10 +34,25 @@ def fetch_move_accuracy_from_db(db, hexdigest, username):
 def hash_pgn(pgn):
     return hashlib.md5(pgn.encode('utf-8')).hexdigest()
 
-def make_game_generator(db, _filter, limit=None):
+def color_filter(username, color=None):
+    _filter = {}
+    if color == WHITE:
+        _filter['pgn'] = {'$regex':f'.*White "{username}".*'}
+    elif color == BLACK:
+        _filter['pgn'] = {'$regex':f'.*Black "{username}".*'}
+    return _filter
+
+def count_user_games(db, args):
+    _filter = {'username': args.username}
+    _filter.update(color_filter(args.username, args.color))
+    return db.games.count_documents(_filter)
+
+def make_game_generator(db, args):
+    _filter = {'username': args.username}
+    _filter.update(color_filter(args.username, args.color))
     cursor = db.games.find(_filter).batch_size(10)
-    if limit is not None:
-        cursor = cursor.limit(limit)
+    if args.limit is not None:
+        cursor = cursor.limit(args.limit)
     try:
         for game_document in cursor:
             yield game_document

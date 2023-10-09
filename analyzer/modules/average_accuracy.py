@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 
 from common.db import make_db
-from common.util import make_game_generator, get_move_accuracy_for_game
+from common.util import make_game_generator, get_move_accuracy_for_game, count_user_games
 
 CONCURRENCY = 8 # rule of thumb: at most, number of physical cores
 
@@ -15,10 +15,9 @@ def run(args):
     if not username:
         print('Username is required', file=sys.stderr)
     db = make_db()
-    _filter = {'username': username}
     game_accuracies = []
-    game_count = args.limit or db.games.count_documents(_filter)
-    game_generator = make_game_generator(db, _filter, limit=args.limit)
+    game_count = count_user_games(db, args)
+    game_generator = make_game_generator(db, args)
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
         with tqdm(total=game_count, smoothing=False) as pbar:
             active_threads = set()
@@ -50,26 +49,18 @@ def run(args):
         if not game_accuracies:
             print(f'No games found in the database for {username}', file=sys.stderr)
             return None
-        average_accuracy = sum(game_accuracies) / len(game_accuracies)
+        games_analyzed = len(game_accuracies)
+        average_accuracy = sum(game_accuracies) / games_analyzed
+        print(f'Games analyzed: {games_analyzed}')
         print(f'Average accuracy: {average_accuracy*100:.2f}%')
         return average_accuracy
 
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(
-        action_name, help='Calculates average accuracy for a user')
+        action_name, help='calculates average accuracy for a user')
     average_accuracy_parser.add_argument(
         '-r',
         '--remote-engine',
         help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
     )
-    average_accuracy_parser.add_argument(
-        '-u',
-        '--username',
-        required=True
-    )
-    average_accuracy_parser.add_argument(
-        '-l',
-        '--limit',
-        type=int,
-        help='limit of games to handle'
-    )
+    

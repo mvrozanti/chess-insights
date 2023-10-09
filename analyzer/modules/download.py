@@ -1,13 +1,18 @@
 from datetime import datetime
+from base64 import b64decode
+
+import requests
 from tqdm import tqdm
 from pymongo.errors import DuplicateKeyError
-import requests
-import math
 
 from dateutil.relativedelta import relativedelta
 
 from common.db import make_db
 from common.util import get_game_datetime, hash_pgn
+
+USER_AGENT = b64decode(
+        'dmVnYW5fY2hlZW1zYnVyZ2VyOTAwMC9jaGVzcy1jb20taW5zaWdodHMtYXQtaG9tZQ=='
+    ).decode('utf-8')
 
 db = make_db()
 
@@ -16,7 +21,7 @@ def download_month(username, year, month):
     url = f'http://api.chess.com/pub/player/{username}/games/{year}/{formatted_month}/pgn'
     headers = {
             'Content-type': 'text/plain',
-            'User-Agent': 'curl/8.3.0',
+            'User-Agent': USER_AGENT,
             'Host': 'api.chess.com',
             'Accept': '*/*'
             }
@@ -54,8 +59,8 @@ def run(args):
                 try:
                     db.games.insert_one(game_document)
                 except DuplicateKeyError:
-                    break
-            if len(all_pgns) > args.limit:
+                    continue
+            if args.limit and len(all_pgns) > args.limit:
                 return all_pgns
             cursor_date = cursor_date - relativedelta(months=1)
             pbar.update(1)
@@ -65,15 +70,4 @@ def run(args):
 def add_subparser(action_name, subparsers):
     downloader_parser = subparsers.add_parser(
         action_name, help='downloads games en masse off the chess.com public API')
-    downloader_parser.add_argument(
-        '-u',
-        '--username',
-        required=True
-    )
-    downloader_parser.add_argument(
-        '-l',
-        '--limit',
-        default=math.inf,
-        type=int,
-        help='limit of games to handle'
-    )
+    

@@ -42,6 +42,17 @@ def color_filter(username, color=None):
         _filter['pgn'] = {'$regex':f'.*Black "{username}".*'}
     return _filter
 
+def get_result(game, username):
+    color = WHITE if game.headers['White'] == username else BLACK
+    result = 0.5
+    if game.headers['Result'] == '1-0':
+        result = 1 if color == WHITE else -1
+    elif game.headers['Result'] == '0-1':
+        result = 1 if color == BLACK else -1
+    else:
+        result = 0.5
+    return result
+
 def color_as_string(color):
     if color is True:
         return 'white'

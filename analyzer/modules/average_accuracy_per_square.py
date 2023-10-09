@@ -55,9 +55,8 @@ def plot_results(square_accuracy, username, actual_game_count, color):
     title = f"{username}\nsquare accuracy"
     if color is not None:
         title += f'\nwith the {color_as_string(color)} pieces'
+    title += f'({actual_game_count} games)'
     plt.title(title)
-    plt.annotate(f'{actual_game_count} games analyzed', xy=(0.5, -0.15), xycoords='axes fraction',
-             fontsize=10, color='gray', ha='center')
     plt.xticks(range(8), list('abcdefgh'))
     plt.yticks(range(8), list('12345678'))
     plt.gca().invert_yaxis()

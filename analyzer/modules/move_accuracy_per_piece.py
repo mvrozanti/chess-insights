@@ -11,7 +11,7 @@ from common.db import make_db
 
 def get_piece_type(board, move):
     piece = re.sub('[^A-Z]', '', board.san(move))
-    return piece if piece else 'p'
+    return piece if piece else 'P'
 
 def get_piece_accuracy_for_game(db, pgn, username):
     piece_accuracy = {}

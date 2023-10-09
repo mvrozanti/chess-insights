@@ -42,6 +42,13 @@ def color_filter(username, color=None):
         _filter['pgn'] = {'$regex':f'.*Black "{username}".*'}
     return _filter
 
+def color_as_string(color):
+    if color is True:
+        return 'white'
+    if color is False:
+        return 'black'
+    raise ValueError()
+
 def count_user_games(db, args):
     _filter = {'username': args.username}
     _filter.update(color_filter(args.username, args.color))

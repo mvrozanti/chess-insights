@@ -5,7 +5,12 @@ from chess import WHITE, BLACK
 from chess.pgn import read_game
 from tqdm import tqdm
 
-from common.util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn, count_user_games
+from common.util import make_game_generator, \
+    fetch_move_accuracy_from_db, \
+    hash_pgn, \
+    count_user_games, \
+    color_as_string
+    
 from common.db import make_db
 
 def get_dest_square(move):
@@ -33,7 +38,7 @@ def get_square_accuracy_for_game(db, pgn, username):
         board.push(actual_move)
     return square_accuracy
 
-def plot_results(square_accuracy, username, actual_game_count):
+def plot_results(square_accuracy, username, actual_game_count, color):
     import matplotlib.pyplot as plt
     from matplotlib.colors import LinearSegmentedColormap
     chess_board = [[0] * 8 for _ in range(8)]
@@ -47,7 +52,12 @@ def plot_results(square_accuracy, username, actual_game_count):
     custom_cmap = LinearSegmentedColormap.from_list(cmap_name, colors)
     plt.imshow(chess_board, cmap=custom_cmap, interpolation='nearest', aspect='auto')
     plt.colorbar(label='Accuracy (%)')
-    plt.title(f'{username}\nSquare accuracy over {actual_game_count} games')
+    title = f"{username}\nsquare accuracy"
+    if color is not None:
+        title += f'\nwith the {color_as_string(color)} pieces'
+    plt.title(title)
+    plt.annotate(f'{actual_game_count} games analyzed', xy=(0.5, -0.15), xycoords='axes fraction',
+             fontsize=10, color='gray', ha='center')
     plt.xticks(range(8), list('abcdefgh'))
     plt.yticks(range(8), list('12345678'))
     plt.gca().invert_yaxis()
@@ -73,7 +83,7 @@ def run(args):
     for square, accuracies in square_accuracy.items():
         square_accuracy[square] = sum(accuracies)/len(accuracies)
     if args.plot:
-        plot_results(square_accuracy, args.username, actual_game_count)
+        plot_results(square_accuracy, args.username, actual_game_count, args.color)
     else:
         for square, accuracy in square_accuracy.items():
             print(f'{square}: {accuracy*100:.2f}%')

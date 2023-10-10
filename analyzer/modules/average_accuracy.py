@@ -7,8 +7,7 @@ from tqdm import tqdm
 
 from common.db import make_db
 from common.util import make_game_generator, get_move_accuracy_for_game, count_user_games
-
-CONCURRENCY = 8 # rule of thumb: at most, number of physical cores
+from common.options import username_option, color_option, limit_option
 
 def run(args):
     username = args.username
@@ -18,7 +17,7 @@ def run(args):
     game_accuracies = []
     game_count = count_user_games(db, args)
     game_generator = make_game_generator(db, args)
-    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+    with ThreadPoolExecutor(max_workers=args.worker_count) as executor:
         with tqdm(total=game_count, smoothing=False) as pbar:
             active_threads = set()
             def pop_future1(game_accuracies, future):
@@ -31,7 +30,7 @@ def run(args):
             pop_future2 = partial(pop_future1, game_accuracies)
             while True:
                 try:
-                    while len(active_threads) == CONCURRENCY:
+                    while len(active_threads) == args.worker_count:
                         time.sleep(0.1)
                     game_document = next(game_generator)
                     pbar.set_description(f'Analyzing {game_document["hexdigest"]}')
@@ -58,9 +57,18 @@ def run(args):
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(
         action_name, help='calculates average accuracy for a user')
+    username_option(average_accuracy_parser)
+    color_option(average_accuracy_parser)
+    limit_option(average_accuracy_parser)
     average_accuracy_parser.add_argument(
         '-r',
         '--remote-engine',
         help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
     )
-    
+    average_accuracy_parser.add_argument(
+        '-w',
+        '--worker-count',
+        default=4,
+        type=int,
+        help='how many workers to have running concurrently'
+    )

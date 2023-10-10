@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from common.util import make_game_generator, count_user_games
 from common.db import make_db
+from common.options import username_option, color_option, limit_option
 
 def get_piece_type(board, move):
     piece = re.sub('[^A-Z]', '', board.san(move))
@@ -52,3 +53,6 @@ def run(args):
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(
         action_name, help='calculates piece move frequency proportions')
+    username_option(average_accuracy_parser)
+    color_option(average_accuracy_parser)
+    limit_option(average_accuracy_parser)

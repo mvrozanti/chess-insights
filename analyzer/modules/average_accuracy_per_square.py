@@ -10,8 +10,8 @@ from common.util import make_game_generator, \
     hash_pgn, \
     count_user_games, \
     color_as_string
-    
 from common.db import make_db
+from common.options import username_option, color_option, limit_option
 
 def get_dest_square(move):
     file = chr((move.to_square % 8) + ord('a'))
@@ -86,10 +86,14 @@ def run(args):
     else:
         for square, accuracy in square_accuracy.items():
             print(f'{square}: {accuracy*100:.2f}%')
+    return square_accuracy
 
 def add_subparser(action_name, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(
         action_name, help='calculates average accuracy per square')
+    username_option(move_accuracy_per_piece_parser)
+    color_option(move_accuracy_per_piece_parser)
+    limit_option(move_accuracy_per_piece_parser)
     move_accuracy_per_piece_parser.add_argument(
         '-p',
         '--plot',

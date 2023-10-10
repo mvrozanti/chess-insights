@@ -5,6 +5,7 @@ from chess.pgn import read_game
 
 from common.db import make_db
 from common.util import make_game_generator, count_user_games, fetch_move_accuracy_from_db, hash_pgn
+from common.options import username_option, color_option, limit_option
 
 def run(args):
     db = make_db()
@@ -33,4 +34,7 @@ def run(args):
 def add_subparser(action_name, subparsers):
     accuracy_by_opening_parser = subparsers.add_parser(
         action_name, help='identifies accuracy by opening')
+    username_option(accuracy_by_opening_parser)
+    color_option(accuracy_by_opening_parser)
+    limit_option(accuracy_by_opening_parser)
     

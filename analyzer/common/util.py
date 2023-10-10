@@ -3,6 +3,8 @@ from io import StringIO
 from datetime import datetime
 from collections import OrderedDict
 import sys
+import os
+from importlib import import_module
 
 from chess import WHITE, BLACK
 from chess.pgn import read_game
@@ -11,6 +13,17 @@ from chess.engine import INFO_SCORE, EngineTerminatedError
 from .engine import make_engine, limit
 from .remote_engine import set_remote_available
 from .db import make_db
+
+MODULES = list(
+    map(lambda f: f[:-3],
+        filter(lambda f: f.endswith('.py'),
+               os.listdir('modules')
+            )
+        )
+    )
+
+def load_module(module):
+    return import_module(f'modules.{module}')
 
 def evaluate_move(board, engine, move):
     info = engine.analyse(board, limit(), root_moves=[move], multipv=1, info=INFO_SCORE)

@@ -5,6 +5,7 @@ from chess.pgn import read_game
 
 from common.db import make_db
 from common.util import make_game_generator, count_user_games, get_result
+from common.options import username_option, color_option, limit_option
 
 def run(args):
     db = make_db()
@@ -27,3 +28,6 @@ def run(args):
 def add_subparser(action_name, subparsers):
     score_by_opening_parser = subparsers.add_parser(
         action_name, help='identifies game score by opening')
+    username_option(score_by_opening_parser)
+    color_option(score_by_opening_parser)
+    limit_option(score_by_opening_parser)

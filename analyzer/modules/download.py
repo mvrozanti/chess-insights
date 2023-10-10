@@ -9,12 +9,11 @@ from dateutil.relativedelta import relativedelta
 
 from common.db import make_db
 from common.util import get_game_datetime, hash_pgn
+from common.options import username_option, limit_option
 
 USER_AGENT = b64decode(
         'dmVnYW5fY2hlZW1zYnVyZ2VyOTAwMC9jaGVzcy1jb20taW5zaWdodHMtYXQtaG9tZQ=='
     ).decode('utf-8')
-
-db = make_db()
 
 def download_month(username, year, month):
     formatted_month = f'0{month}' if month < 10 else month
@@ -37,6 +36,7 @@ def download_month(username, year, month):
     return pgns
 
 def run(args):
+    db = make_db()
     username = args.username
     cursor_date = datetime.now() - relativedelta(months=1)
     username = args.username
@@ -70,4 +70,5 @@ def run(args):
 def add_subparser(action_name, subparsers):
     downloader_parser = subparsers.add_parser(
         action_name, help='downloads games en masse off the chess.com public API')
-    
+    username_option(downloader_parser)
+    limit_option(downloader_parser)

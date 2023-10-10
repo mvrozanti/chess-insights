@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from common.util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn, count_user_games
 from common.db import make_db
+from common.options import username_option, color_option, limit_option
 
 def get_piece_type(board, move):
     piece = re.sub('[^A-Z]', '', board.san(move))
@@ -54,3 +55,6 @@ def run(args):
 def add_subparser(action_name, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(
         action_name, help='calculates average accuracy per piece for a user')
+    username_option(move_accuracy_per_piece_parser)
+    color_option(move_accuracy_per_piece_parser)
+    limit_option(move_accuracy_per_piece_parser)

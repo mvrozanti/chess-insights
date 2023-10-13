@@ -17,13 +17,13 @@ from .db import make_db
 MODULES = list(
     map(lambda f: f[:-3],
         filter(lambda f: f.endswith('.py'),
-               os.listdir('modules')
+               os.listdir('src/modules')
             )
         )
     )
 
 def load_module(module):
-    return import_module(f'modules.{module}')
+    return import_module(f'modules.{module}', 'src')
 
 def evaluate_move(board, engine, move):
     info = engine.analyse(board, limit(), root_moves=[move], multipv=1, info=INFO_SCORE)

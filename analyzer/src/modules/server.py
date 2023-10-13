@@ -8,9 +8,9 @@ DEFAULT_SERVER_PORT = 8085
 
 def run(super_args):
     app = Flask(__name__)
-    @app.route('/modules')
-    def list_modules():
-        return MODULES
+    @app.route('/')
+    def healthcheck():
+        return 'ayy'
     @app.route('/module/<string:module_name>', methods=['POST'])
     def run_module(module_name):
         module = load_module(module_name)
@@ -18,8 +18,8 @@ def run(super_args):
         subparsers = parser.add_subparsers(dest='command')
         module.add_subparser(module_name, subparsers)
         args = [module_name]
-        for k,v in request.form.items():
-            args += [f'--{k}', v]
+        for k,v in request.json.items():
+            args += [f'--{k}', str(v)]
         args = parser.parse_args(args)
         vars(super_args).update(vars(args))
         return module.run(super_args)

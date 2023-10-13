@@ -13,11 +13,19 @@ from common.util import make_game_generator, \
 from common.db import make_db
 from common.options import username_option, color_option, limit_option
 
+def square_coords_to_index(square):
+    file, rank = square[0], int(square[1])
+    file_index = ord(file) - ord('a')
+    rank_index = rank - 1
+    return file_index + rank_index * 8
+
+
 def get_dest_square(move):
     file = chr((move.to_square % 8) + ord('a'))
     rank = (move.to_square // 8) + 1
     square = file + str(rank)
     return square
+
 
 def get_square_accuracy_for_game(db, pgn, username):
     square_accuracy = {}
@@ -38,6 +46,7 @@ def get_square_accuracy_for_game(db, pgn, username):
         board.push(actual_move)
     return square_accuracy
 
+
 def plot_results(square_accuracy, username, actual_game_count, color):
     import matplotlib.pyplot as plt
     from matplotlib.colors import LinearSegmentedColormap
@@ -47,10 +56,12 @@ def plot_results(square_accuracy, username, actual_game_count, color):
         row = int(square[1]) - 1
         chess_board[row][col] = percentage
     plt.figure(figsize=(8, 8))
-    colors = [(1, 0, 0), (1, 0.5, 0.5), (1, 0.65, 0), (1, 1, 0), (0, 1, 0), (0, 1, 1)]
+    colors = [(1, 0, 0), (1, 0.5, 0.5), (1, 0.65, 0),
+              (1, 1, 0), (0, 1, 0), (0, 1, 1)]
     cmap_name = 'red_cyan'
     custom_cmap = LinearSegmentedColormap.from_list(cmap_name, colors)
-    plt.imshow(chess_board, cmap=custom_cmap, interpolation='nearest', aspect='auto')
+    plt.imshow(chess_board, cmap=custom_cmap,
+               interpolation='nearest', aspect='auto')
     plt.colorbar(label='Accuracy (%)')
     title = f"{username}\nsquare accuracy"
     if color is not None:
@@ -62,6 +73,7 @@ def plot_results(square_accuracy, username, actual_game_count, color):
     plt.gca().invert_yaxis()
     plt.show()
 
+
 def run(args):
     if not args.username:
         print('Username is required', file=sys.stderr)
@@ -72,7 +84,8 @@ def run(args):
     game_generator = make_game_generator(db, args)
     for game_document in tqdm(game_generator, total=game_count):
         pgn = game_document['pgn']
-        square_accuracies_for_game = get_square_accuracy_for_game(db, pgn, args.username)
+        square_accuracies_for_game = get_square_accuracy_for_game(
+            db, pgn, args.username)
         for square, accuracies in square_accuracies_for_game.items():
             if square not in square_accuracy:
                 square_accuracy[square] = []
@@ -82,11 +95,19 @@ def run(args):
     for square, accuracies in square_accuracy.items():
         square_accuracy[square] = sum(accuracies)/len(accuracies)
     if args.plot:
-        plot_results(square_accuracy, args.username, actual_game_count, args.color)
+        plot_results(square_accuracy, args.username,
+                     actual_game_count, args.color)
     else:
         for square, accuracy in square_accuracy.items():
             print(f'{square}: {accuracy*100:.2f}%')
-    return square_accuracy
+    matrix = [[None] * 8 for _ in range(8)]
+    for square, accuracy in square_accuracy.items():
+        index = square_coords_to_index(square)
+        row = index // 8
+        col = index % 8
+        matrix[row][col] = accuracy
+    return matrix
+
 
 def add_subparser(action_name, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(
@@ -99,4 +120,3 @@ def add_subparser(action_name, subparsers):
         '--plot',
         action='store_true'
     )
-    

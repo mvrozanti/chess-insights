@@ -2,3 +2,4 @@ python-chess
 pymongo
 tqdm
 flask
+flask-cors

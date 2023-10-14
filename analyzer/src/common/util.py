@@ -5,6 +5,7 @@ from collections import OrderedDict
 import sys
 import os
 from importlib import import_module
+import re
 
 from chess import WHITE, BLACK
 from chess.pgn import read_game
@@ -21,6 +22,16 @@ MODULES = list(
             )
         )
     )
+
+def map_color_option(args):
+    if not hasattr(args, 'color'):
+        return
+    if args.color == 'white':
+        args.color = WHITE
+    if args.color == 'black':
+        args.color = BLACK
+    if args.color == 'any':
+        args.color = None
 
 def load_module(module):
     return import_module(f'modules.{module}', 'src')
@@ -66,10 +77,17 @@ def get_result(game, username):
         result = 0.5
     return result
 
+def string_as_color(string):
+    if string.lower() == 'white':
+        return WHITE
+    if string.lower() == 'black':
+        return BLACK
+    raise ValueError()
+
 def color_as_string(color):
-    if color is True:
+    if color is WHITE:
         return 'white'
-    if color is False:
+    if color is BLACK:
         return 'black'
     raise ValueError()
 
@@ -99,7 +117,7 @@ def get_move_accuracy_for_game(pgn, username, remote_engine):
     move_accuracy = []
     game = read_game(StringIO(pgn))
     board = game.board()
-    color = WHITE if game.headers['White'] == username else BLACK
+    color = get_user_color(username, game)
     for actual_move in game.mainline_moves():
         if board.turn != color:
             board.push(actual_move)
@@ -164,3 +182,15 @@ def get_game_datetime(pgn):
     date_format = "%Y.%m.%d %H:%M:%S"
     game_datetime = datetime.strptime(f'{game_date} {game_time}', date_format)
     return game_datetime
+
+def get_user_color_from_pgn(username, pgn):
+    match_white = re.match('.*White "(.+?)".*', pgn, re.DOTALL)
+    match_black = re.match('.*Black "(.+?)".*', pgn, re.DOTALL)
+    if match_white and match_white.group(1) == username:
+        return WHITE
+    if match_black and match_black.group(1) == username:
+        return BLACK
+    raise ValueError()
+
+def get_user_color(username, game):
+    return WHITE if game.headers['White'] == username else BLACK

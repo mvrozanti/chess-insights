@@ -9,6 +9,13 @@ from common.db import make_db
 from common.util import make_game_generator, get_move_accuracy_for_game, count_user_games
 from common.options import username_option, color_option, limit_option
 
+def update_running_accuracy(username, hexdigest, game_accuracy):
+    db.running_accuracy.insert_one({ 
+        'username': username, 
+        'hexdigest': hexdigest, 
+        'game_accuracy': game_accuracy
+        })
+
 def run(args):
     username = args.username
     if not username:
@@ -52,7 +59,9 @@ def run(args):
         average_accuracy = sum(game_accuracies) / games_analyzed
         print(f'Games analyzed: {games_analyzed}')
         print(f'Average accuracy: {average_accuracy*100:.2f}%')
+        
         return average_accuracy
+
 
 def add_subparser(action_name, subparsers):
     average_accuracy_parser = subparsers.add_parser(

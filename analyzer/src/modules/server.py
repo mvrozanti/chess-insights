@@ -3,7 +3,7 @@ from argparse import Namespace, ArgumentParser
 from flask import Flask, request # pylint: disable=W0611
 from flask_cors import CORS
 
-from common.util import load_module, MODULES
+from common.util import load_module, MODULES, map_color_option
 
 DEFAULT_SERVER_PORT = 8085
 
@@ -23,6 +23,7 @@ def run(super_args):
             args += [f'--{k}', str(v)]
         args = parser.parse_args(args)
         vars(super_args).update(vars(args))
+        map_color_option(super_args)
         return module.run(super_args)
     CORS(app)
     app.run()

@@ -1,11 +1,11 @@
 import sys
 from io import StringIO
+import pickle
 
 from chess import WHITE, BLACK
 from chess.pgn import read_game
 from tqdm import tqdm
 import numpy as np
-import pickle
 from bson import Binary
 
 from common.util import make_game_generator, \
@@ -16,13 +16,6 @@ from common.util import make_game_generator, \
     get_user_color_from_pgn
 from common.db import make_db
 from common.options import username_option, color_option, limit_option
-
-def square_coords_to_index(square):
-    file, rank = square[0], int(square[1])
-    file_index = ord(file) - ord('a')
-    rank_index = rank - 1
-    return file_index + rank_index * 8
-
 
 def get_dest_square(move):
     file = chr((move.to_square % 8) + ord('a'))
@@ -69,15 +62,21 @@ def plot_results(accuracy_matrix, username, actual_game_count, color):
     plt.yticks(range(8), list('12345678'))
     plt.gca().invert_yaxis()
     plt.show()
-
     
+    
+def square_coords_to_index(square):
+    file, rank = square[0], int(square[1])
+    file_index = ord(file) - ord('a')
+    rank_index = rank - 1
+    return file_index + rank_index * 8
+
 def square_accuracy_to_matrix(square_accuracy):
-    matrix = [[0] * 8 for _ in range(8)]
+    matrix = [[None] * 8 for _ in range(8)]
     for square, accuracies in square_accuracy.items():
         index = square_coords_to_index(square)
         row = index // 8
         col = index % 8
-        matrix[row][col] = sum(accuracies)/len(accuracies)
+        matrix[row][col] = sum(accuracies) / len(accuracies)
     return np.array(matrix)
 
 def fetch_running_accuracy_per_square_for_user(db, args):
@@ -97,18 +96,18 @@ def fetch_running_accuracy_per_square_for_user(db, args):
         }
         return initialization
     running_accuracy_per_square = raw_running_accuracy_per_square
-    running_accuracy_per_square['sum_white'] = np.frombuffer(raw_running_accuracy_per_square['sum_white']).reshape((8,8))
-    running_accuracy_per_square['len_white'] = np.frombuffer(raw_running_accuracy_per_square['len_white']).reshape((8,8))
-    running_accuracy_per_square['sum_black'] = np.frombuffer(raw_running_accuracy_per_square['sum_black']).reshape((8,8))
-    running_accuracy_per_square['len_black'] = np.frombuffer(raw_running_accuracy_per_square['len_black']).reshape((8,8))
+    running_accuracy_per_square['sum_white'] = pickle.loads(raw_running_accuracy_per_square['sum_white'])
+    running_accuracy_per_square['len_white'] = pickle.loads(raw_running_accuracy_per_square['len_white'])
+    running_accuracy_per_square['sum_black'] = pickle.loads(raw_running_accuracy_per_square['sum_black'])
+    running_accuracy_per_square['len_black'] = pickle.loads(raw_running_accuracy_per_square['len_black'])
     return running_accuracy_per_square
 
 def update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square):
-    running_accuracy_per_square = running_accuracy_per_square.copy()
-    running_accuracy_per_square['sum_white'] = Binary(running_accuracy_per_square['sum_white'].tobytes())
-    running_accuracy_per_square['sum_black'] = Binary(running_accuracy_per_square['sum_black'].tobytes())
-    running_accuracy_per_square['len_white'] = Binary(running_accuracy_per_square['len_white'].tobytes())
-    running_accuracy_per_square['len_black'] = Binary(running_accuracy_per_square['len_black'].tobytes())
+    running_accuracy_per_square = dict(running_accuracy_per_square)
+    running_accuracy_per_square['sum_white'] = Binary(pickle.dumps(running_accuracy_per_square['sum_white']))
+    running_accuracy_per_square['sum_black'] = Binary(pickle.dumps(running_accuracy_per_square['sum_black']))
+    running_accuracy_per_square['len_white'] = Binary(pickle.dumps(running_accuracy_per_square['len_white']))
+    running_accuracy_per_square['len_black'] = Binary(pickle.dumps(running_accuracy_per_square['len_black']))
     db.running_accuracy_per_square.replace_one({
         'username': args.username, 
         }, running_accuracy_per_square, upsert=True)
@@ -134,19 +133,24 @@ def run(args):
             db, pgn, args.username)
         square_accuracy_matrix = square_accuracy_to_matrix(square_accuracies_for_game)
         game_color_string = color_as_string(game_color)
-        running_accuracy_per_square[f'sum_{game_color_string}'] += square_accuracy_matrix
+        
+        running_accuracy_per_square[f'sum_{game_color_string}'] = running_accuracy_per_square[f'sum_{game_color_string}'].copy() + \
+            np.where(square_accuracy_matrix == None, 0, square_accuracy_matrix)
         square_accuracy_matrix_len = np.vectorize(lambda v: 1 if v is not None else 0)(square_accuracy_matrix)
-        running_accuracy_per_square[f'len_{game_color_string}'] += square_accuracy_matrix_len
+        running_accuracy_per_square[f'len_{game_color_string}'] = running_accuracy_per_square[f'len_{game_color_string}'].copy() + square_accuracy_matrix_len
         running_accuracy_per_square[f'games_{game_color_string}'] += [hexdigest]
-        update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square)
+    update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square)
     if args.color:
         color_string = color_as_string(args.color)
-        return running_accuracy_per_square['sum_{color_string}'] / running_accuracy_per_square['len_{color_string}']
+        sum = running_accuracy_per_square['sum_{color_string}']
+        len = running_accuracy_per_square['len_{color_string}']
     else:
-        sum = running_accuracy_per_square['sum_white'] + running_accuracy_per_square['sum_black']
-        len = running_accuracy_per_square['len_white'] + running_accuracy_per_square['len_black']
-        return (sum / len).tolist()
-
+        sum = running_accuracy_per_square['sum_white'] + \
+            running_accuracy_per_square['sum_black']
+        len = running_accuracy_per_square['len_white'] + \
+            running_accuracy_per_square['len_black']
+    heatmap = (sum / len).tolist()
+    return heatmap
 
 def add_subparser(action_name, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(

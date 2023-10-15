@@ -10,10 +10,9 @@ from dateutil.relativedelta import relativedelta
 from common.db import make_db
 from common.util import get_game_datetime, hash_pgn
 from common.options import username_option, limit_option
+from common.config import config
 
-USER_AGENT = b64decode(
-        'dmVnYW5fY2hlZW1zYnVyZ2VyOTAwMC9jaGVzcy1jb20taW5zaWdodHMtYXQtaG9tZQ=='
-    ).decode('utf-8')
+USER_AGENT = f'{config["downloader-user-agent-username"]}/chess-com-insights-at-home'
 
 def download_month(username, year, month):
     formatted_month = f'0{month}' if month < 10 else month

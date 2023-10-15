@@ -3,3 +3,4 @@ pymongo
 tqdm
 flask
 flask-cors
+appdirs

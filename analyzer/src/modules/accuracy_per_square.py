@@ -113,6 +113,7 @@ def update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_s
         }, running_accuracy_per_square, upsert=True)
 
 def run(args):
+    print(args.color)
     if not args.username:
         print('Username is required', file=sys.stderr)
     db = make_db()
@@ -140,10 +141,10 @@ def run(args):
         running_accuracy_per_square[f'len_{game_color_string}'] = running_accuracy_per_square[f'len_{game_color_string}'].copy() + square_accuracy_matrix_len
         running_accuracy_per_square[f'games_{game_color_string}'] += [hexdigest]
     update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square)
-    if args.color:
+    if args.color is not None:
         color_string = color_as_string(args.color)
-        sum = running_accuracy_per_square['sum_{color_string}']
-        len = running_accuracy_per_square['len_{color_string}']
+        sum = running_accuracy_per_square[f'sum_{color_string}']
+        len = running_accuracy_per_square[f'len_{color_string}']
     else:
         sum = running_accuracy_per_square['sum_white'] + \
             running_accuracy_per_square['sum_black']

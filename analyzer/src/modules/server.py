@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 from common.util import load_module, MODULES, map_color_option
 
-DEFAULT_SERVER_PORT = 8085
+DEFAULT_SERVER_PORT = 5000
 
 def run(super_args):
     app = Flask(__name__)
@@ -22,11 +22,10 @@ def run(super_args):
         for k,v in request.json.items():
             args += [f'--{k}', str(v)]
         args = parser.parse_args(args)
-        vars(super_args).update(vars(args))
-        map_color_option(super_args)
-        return module.run(super_args)
+        args = map_color_option(args)
+        return module.run(args)
     CORS(app)
-    app.run()
+    app.run(port=super_args.port)
 
 def add_subparser(action_name, subparsers):
     server_parser = subparsers.add_parser(

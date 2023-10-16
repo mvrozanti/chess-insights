@@ -25,13 +25,15 @@ MODULES = list(
 
 def map_color_option(args):
     if not hasattr(args, 'color'):
-        return
+        args.color = 'any'
+        return args
     if args.color == 'white':
         args.color = WHITE
     if args.color == 'black':
         args.color = BLACK
     if args.color == 'any':
         args.color = None
+    return args
 
 def load_module(module):
     return import_module(f'modules.{module}', 'src')
@@ -66,7 +68,7 @@ def color_filter(username, color=None):
         _filter['pgn'] = {'$regex':f'.*Black "{username}".*'}
     return _filter
 
-def get_result(game, username):
+def get_game_result(game, username):
     color = WHITE if game.headers['White'] == username else BLACK
     result = 0.5
     if game.headers['Result'] == '1-0':

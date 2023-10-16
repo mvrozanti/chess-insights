@@ -4,7 +4,7 @@ from tqdm import tqdm
 from chess.pgn import read_game
 
 from common.db import make_db
-from common.util import make_game_generator, count_user_games, get_result
+from common.util import make_game_generator, count_user_games, get_game_result
 from common.options import username_option, color_option, limit_option
 
 def run(args):
@@ -18,7 +18,7 @@ def run(args):
         if 'ECO' not in game.headers:
             continue
         opening = game.headers['ECO']
-        result = get_result(game, args.username)
+        result = get_game_result(game, args.username)
         if opening not in opening_scores:
             opening_scores[opening] = 0
         opening_scores[opening] += result

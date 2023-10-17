@@ -23,6 +23,9 @@ def __setup_db(db):
     db.running_accuracy_per_square.create_index([
             ('username', TEXT)
          ], unique = True)
+    db.games_played_summary.create_index([
+            ('username', TEXT)
+         ], unique = True)
 
 
 def make_db():

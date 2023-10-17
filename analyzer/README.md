@@ -1,10 +1,31 @@
-## Features
+## Chess.com Features
+- [x] Games played
+- [x] Average accuracy
+- [ ] Accuracy by move number
+- [ ] Results by opponent rating
+- [ ] Games won/drew/lost by ..
+- [ ] Games by game shape
+- [ ] Results by game shape
+- [ ] Accuracy by game shape
+- [ ] Game Phases
+- [ ] Forks
+- [ ] Pins
+- [ ] Mates
+- [ ] Hanging Pieces
+- [ ] Free Pieces
+- [ ] Pieces
+- [ ] Accuracy per piece
+- [x] Average accuracy per piece
+- [ ] Castling
+- [ ] Time of Day 
+- [ ] Day of Week
+- [ ] Geography
+
+## Extra Features
 
 * Date filters for every query
 
-- [x] Average accuracy
-- [x] Average accuracy of actual move (h4, g4, b4 come to mind...)
-- [x] Average accuracy by piece type (pawn, knight, bishop, rook, queen)
+- [x] Accuracy per square
 - [x] Opening win/loss stats
 - [ ] Average accuracy by opening
 - [x] Average move frequency by piece

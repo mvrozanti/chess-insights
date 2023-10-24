@@ -3,7 +3,13 @@ from io import StringIO
 from tqdm import tqdm
 from chess.pgn import read_game
 
-from common.util import make_game_generator, get_game_result, read_game, hash_pgn, count_user_games
+from common.util import (
+    make_game_generator,
+    get_game_result,
+    read_game,
+    hash_pgn,
+    count_user_games
+)
 from common.options import username_option, color_option, limit_option
 from common.db import make_db
 

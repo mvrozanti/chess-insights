@@ -10,10 +10,11 @@ import re
 from chess import WHITE, BLACK
 from chess.pgn import read_game
 from chess.engine import INFO_SCORE, EngineTerminatedError
+from chess.pgn import StringExporter
 
 from .engine import make_engine, limit
 from .remote_engine import set_remote_available
-from .db import make_db
+from .db import make_db, fetch_move_accuracy_from_db, fetch_evaluation_from_db
 
 MODULES = list(
     map(lambda f: f[:-3],
@@ -48,14 +49,6 @@ def evaluate_move(board, engine, move):
     else:
         value = relative_eval.cp
     return value
-
-def fetch_evaluation_from_db(db, fen, move):
-    return db.move_analyses.find_one({'fen': fen, 'move': move.uci()})
-
-def fetch_move_accuracy_from_db(db, hexdigest, username):
-    _filter = {'hexdigest': hexdigest, 'username': username}
-    move_accuracy = db.move_accuracy_pgn_username.find_one(_filter)
-    return move_accuracy['move_accuracy'] if move_accuracy else None
 
 def hash_pgn(pgn):
     return hashlib.md5(pgn.encode('utf-8')).hexdigest()
@@ -110,14 +103,14 @@ def make_game_generator(db, args):
     finally:
         cursor.close()
 
-def get_move_accuracy_for_game(pgn, username, remote_engine):
+def get_move_accuracy_for_game(game, username, remote_engine):
     db = make_db()
+    pgn = game.accept(StringExporter())
     move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
     if move_accuracy_from_db:
         return move_accuracy_from_db
     engine, is_remote_engine = make_engine(remote=remote_engine)
     move_accuracy = []
-    game = read_game(StringIO(pgn))
     board = game.board()
     color = get_user_color(username, game)
     for actual_move in game.mainline_moves():
@@ -146,6 +139,9 @@ def get_move_accuracy_for_game(pgn, username, remote_engine):
         set_remote_available(True)
     return move_accuracy
 
+def get_move_accuracy_for_pgn(pgn, username, remote_engine):
+    game = read_game(StringIO(pgn))
+    return get_move_accuracy_for_game(game, username, remote_engine)
 
 def get_move_accuracy(db, board, engine, actual_move, pgn):
     moves = {}

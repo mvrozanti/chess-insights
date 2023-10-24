@@ -63,4 +63,4 @@
 
 - [ ] Queen trade accuracy (?)
 
-
+- [x] Best matches (accuracy sum)

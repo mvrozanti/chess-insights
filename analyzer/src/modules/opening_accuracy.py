@@ -4,7 +4,12 @@ from tqdm import tqdm
 from chess.pgn import read_game
 
 from common.db import make_db
-from common.util import make_game_generator, count_user_games, fetch_move_accuracy_from_db, hash_pgn
+from common.util import (
+    make_game_generator,
+    count_user_games,
+    fetch_move_accuracy_from_db,
+    hash_pgn
+)
 from common.options import username_option, color_option, limit_option
 
 def run(args):

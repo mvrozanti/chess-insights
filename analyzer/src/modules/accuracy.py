@@ -6,8 +6,18 @@ from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 
 from common.db import make_db
-from common.util import make_game_generator, get_move_accuracy_for_game, count_user_games
-from common.options import username_option, color_option, limit_option
+from common.util import (
+    make_game_generator,
+    get_move_accuracy_for_game,
+    count_user_games
+)
+from common.options import (
+    username_option,
+    color_option,
+    limit_option,
+    worker_count_option,
+    remote_engine_option
+)
 
 def update_running_accuracy(username, hexdigest, game_accuracy):
     db.running_accuracy.insert_one({ 
@@ -69,15 +79,5 @@ def add_subparser(action_name, subparsers):
     username_option(average_accuracy_parser)
     color_option(average_accuracy_parser)
     limit_option(average_accuracy_parser)
-    average_accuracy_parser.add_argument(
-        '-r',
-        '--remote-engine',
-        help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
-    )
-    average_accuracy_parser.add_argument(
-        '-w',
-        '--worker-count',
-        default=4,
-        type=int,
-        help='how many workers to have running concurrently'
-    )
+    worker_count_option(average_accuracy_parser)
+    remote_engine_option(average_accuracy_parser)

@@ -34,3 +34,14 @@ def make_db():
     db = client['analyzer']
     __setup_db(db)
     return db
+
+def fetch_evaluation_from_db(db, fen, move):
+    return db.move_analyses.find_one({'fen': fen, 'move': move.uci()})
+
+def fetch_game_from_db(db, hexdigest):
+    return db.games.find_one({'hexdigest': hexdigest})
+
+def fetch_move_accuracy_from_db(db, hexdigest, username):
+    _filter = {'hexdigest': hexdigest, 'username': username}
+    move_accuracy = db.move_accuracy_pgn_username.find_one(_filter)
+    return move_accuracy['move_accuracy'] if move_accuracy else None

@@ -1,6 +1,5 @@
 from chess.engine import SimpleEngine, Limit
 from .remote_engine import make_remote, is_remote_available
-import os
 
 def make_engine(remote=None):
     if remote and is_remote_available():

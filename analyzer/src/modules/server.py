@@ -1,6 +1,7 @@
 from argparse import Namespace, ArgumentParser
+import json
 
-from flask import Flask, request # pylint: disable=W0611
+from flask import Flask, request, abort, jsonify, make_response # pylint: disable=W0611
 from flask_cors import CORS
 
 from common.util import load_module, MODULES, map_color_option
@@ -14,7 +15,10 @@ def run(super_args):
         return 'ayy'
     @app.route('/module/<string:module_name>', methods=['POST'])
     def run_module(module_name):
-        module = load_module(module_name)
+        try:
+            module = load_module(module_name)
+        except:
+            return make_response(f'Module not found: {module_name}', 400)
         parser = ArgumentParser()
         subparsers = parser.add_subparsers(dest='command')
         module.add_subparser(module_name, subparsers)

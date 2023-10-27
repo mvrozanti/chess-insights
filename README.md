@@ -68,3 +68,4 @@
 - [ ] Add 960 support and filters
 - [ ] UT/Coverage/CI
 - [ ] Cache pgn/game mapping
+- [ ] Download 3-4-5 tables automatically

@@ -66,6 +66,6 @@ def run(args):
 
 def add_subparser(action_name, subparsers):
     games_played_parser = subparsers.add_parser(
-        action_name, help='Summary of games played')
+        action_name, help='summary of games played')
     username_option(games_played_parser)
     limit_option(games_played_parser)

@@ -24,7 +24,10 @@ def run(super_args):
         module.add_subparser(module_name, subparsers)
         args = [module_name]
         for k,v in request.json.items():
-            args += [f'--{k}', str(v)]
+            if type(v) == list:
+                args += [f'--{k}'] + [str(e) for e in v]
+            else:
+                args += [f'--{k}', str(v)]
         args = parser.parse_args(args)
         args = map_color_option(args)
         return module.run(args)

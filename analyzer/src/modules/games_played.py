@@ -61,6 +61,7 @@ def run(args):
     db.games_played_summary.replace_one({
         'username': args.username, 
         }, new_summary_document, upsert=True)
+    print(summary)
     return summary
 
 def add_subparser(action_name, subparsers):

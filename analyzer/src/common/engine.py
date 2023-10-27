@@ -1,5 +1,7 @@
 from chess.engine import SimpleEngine, Limit
+
 from .remote_engine import make_remote, is_remote_available
+from .config import config
 
 def make_engine(remote=None):
     if remote and is_remote_available():
@@ -9,4 +11,4 @@ def make_engine(remote=None):
     return engine, False
 
 def limit():
-    return Limit(time=0.001)
+    return Limit(time=config['think-time-seconds'])

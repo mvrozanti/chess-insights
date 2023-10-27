@@ -10,10 +10,6 @@ from common.util import make_game_generator, count_user_games
 from common.db import make_db
 from common.options import username_option, color_option, limit_option
 
-def get_piece_type(board, move):
-    piece = re.sub('[^A-Z]', '', board.san(move))
-    return piece if piece else 'P'
-
 def get_piece_frequency_for_game(pgn, username):
     piece_frequency = {}
     game = read_game(StringIO(pgn))

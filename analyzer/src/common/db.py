@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from pymongo import TEXT
 from pymongo import MongoClient
+import re
 
 def __setup_db(db):
     db.games.create_index([

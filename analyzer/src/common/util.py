@@ -7,7 +7,7 @@ import os
 from importlib import import_module
 import re
 
-from chess import WHITE, BLACK
+from chess import WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
 from chess.pgn import read_game
 from chess.engine import INFO_SCORE, EngineTerminatedError
 from chess.pgn import StringExporter
@@ -16,6 +16,8 @@ from .engine import make_engine, limit
 from .remote_engine import set_remote_available
 from .db import make_db, fetch_move_accuracy_from_db, fetch_evaluation_from_db
 
+PIECES = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING]
+
 MODULES = list(
     map(lambda f: f[:-3],
         filter(lambda f: f.endswith('.py'),
@@ -23,6 +25,33 @@ MODULES = list(
             )
         )
     )
+
+def get_piece_type_from_name(piece_name):
+    return {
+        'pawn': PAWN,
+        'knight': KNIGHT,
+        'bishop': BISHOP,
+        'rook': ROOK,
+        'queen': QUEEN,
+        'king': KING
+    }[piece_name]
+
+def get_piece_repr(board, move):
+    piece = re.sub('[^A-Z]', '', board.san(move))
+    return piece if piece else 'P'
+
+def get_piece_type(board, move):
+    piece_repr = get_piece_repr(board, move)
+    return {
+        'P': PAWN,
+        'N': KNIGHT,
+        'B': BISHOP,
+        'R': ROOK,
+        'Q': QUEEN,
+        'K': KING,
+        'OO': KING,
+        'OOO': KING,
+    }[piece_repr]
 
 def map_color_option(args):
     if not hasattr(args, 'color'):
@@ -56,9 +85,9 @@ def hash_pgn(pgn):
 def color_filter(username, color=None):
     _filter = {}
     if color == WHITE:
-        _filter['pgn'] = {'$regex':f'.*White "{username}".*'}
+        _filter['pgn'] = {'$regex':f'.*White "{username}".*', '$options' : 'i'}
     elif color == BLACK:
-        _filter['pgn'] = {'$regex':f'.*Black "{username}".*'}
+        _filter['pgn'] = {'$regex':f'.*Black "{username}".*', '$options' : 'i'}
     return _filter
 
 def get_game_result(game, username):
@@ -89,7 +118,8 @@ def color_as_string(color):
 def count_user_games(db, args):
     _filter = {'username': args.username}
     _filter.update(color_filter(args.username, args.color))
-    return db.games.count_documents(_filter)
+    document_count = db.games.count_documents(_filter)
+    return document_count
 
 def make_game_generator(db, args):
     _filter = {'username': args.username}
@@ -103,14 +133,14 @@ def make_game_generator(db, args):
     finally:
         cursor.close()
 
-def get_move_accuracy_for_game(game, username, remote_engine):
+def get_move_accuracy_for_game(pgn, username, remote_engine):
     db = make_db()
-    pgn = game.accept(StringExporter())
     move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
     if move_accuracy_from_db:
         return move_accuracy_from_db
     engine, is_remote_engine = make_engine(remote=remote_engine)
     move_accuracy = []
+    game = read_game(StringIO(pgn))
     board = game.board()
     color = get_user_color(username, game)
     for actual_move in game.mainline_moves():
@@ -138,10 +168,6 @@ def get_move_accuracy_for_game(game, username, remote_engine):
     if is_remote_engine:
         set_remote_available(True)
     return move_accuracy
-
-def get_move_accuracy_for_pgn(pgn, username, remote_engine):
-    game = read_game(StringIO(pgn))
-    return get_move_accuracy_for_game(game, username, remote_engine)
 
 def get_move_accuracy(db, board, engine, actual_move, pgn):
     moves = {}
@@ -184,11 +210,11 @@ def get_game_datetime(pgn):
 def get_user_color_from_pgn(username, pgn):
     match_white = re.match('.*White "(.+?)".*', pgn, re.DOTALL)
     match_black = re.match('.*Black "(.+?)".*', pgn, re.DOTALL)
-    if match_white and match_white.group(1) == username:
+    if match_white and match_white.group(1).lower() == username.lower():
         return WHITE
-    if match_black and match_black.group(1) == username:
+    if match_black and match_black.group(1).lower() == username.lower():
         return BLACK
-    raise ValueError()
+    raise ValueError(f'Unknown value: \n{pgn}')
 
 def get_user_color(username, game):
     return WHITE if game.headers['White'] == username else BLACK

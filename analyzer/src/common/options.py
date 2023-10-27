@@ -37,3 +37,14 @@ def remote_engine_option(parser):
         '--remote-engine',
         help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
     )
+
+def piece_option(parser):
+    choices = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
+    parser.add_argument(
+        '-p',
+        '--piece',
+        default=choices,
+        nargs='*',
+        choices=choices,
+        help='filters by piece'
+    )

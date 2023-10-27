@@ -2,8 +2,10 @@ from functools import partial
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from io import StringIO
 
 from tqdm import tqdm
+from chess.pgn import read_game
 
 from common.db import make_db
 from common.util import (
@@ -50,7 +52,8 @@ def run(args):
                     while len(active_threads) == args.worker_count:
                         time.sleep(0.1)
                     game_document = next(game_generator)
-                    pbar.set_description(f'Analyzing {game_document["hexdigest"]}')
+                    hexdigest = game_document['hexdigest']
+                    pbar.set_description(f'Analyzing {hexdigest}')
                     future = executor.submit(get_move_accuracy_for_game,
                                              game_document['pgn'],
                                              username,

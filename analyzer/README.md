@@ -23,9 +23,8 @@
 
 ## Extra Features
 
-* Date filters for every query
-
 - [x] Accuracy per square
+- [x] Accuracy per square per piece
 - [x] Opening win/loss stats
 - [ ] Average accuracy by opening
 - [x] Average move frequency by piece
@@ -56,11 +55,16 @@
 
 - [ ] Average check accuracy (not counting checkmate obviously)
 - [ ] Average material balance (determinable)
-- [ ] Compulsory captures caused and suffered rate (e.g. 0.01 per game)
+- [ ] Compulsory captures caused and suffered total and rates per game
 
-- [] Move frequency diff between light and dark bishops
-- [] Draw offers accepted when its due
+- [ ] Move frequency diff between light and dark bishops
+- [ ] Draw by agreement accuracy
 
 - [ ] Queen trade accuracy (?)
 
 - [x] Best matches (accuracy sum)
+
+## To do
+- [ ] Add 960 support and filters
+- [ ] UT/Coverage/CI
+- [ ] Cache pgn/game mapping

@@ -8,41 +8,48 @@ from tqdm import tqdm
 import numpy as np
 from bson import Binary
 
-from common.util import make_game_generator, \
-    fetch_move_accuracy_from_db, \
-    hash_pgn, \
-    count_user_games, \
-    color_as_string, \
-    get_user_color_from_pgn
+from common.util import (
+    make_game_generator,
+    fetch_move_accuracy_from_db,
+    hash_pgn,
+    count_user_games,
+    color_as_string,
+    get_user_color_from_pgn,
+    get_piece_type,
+    get_piece_type_from_name,
+    PIECES
+)
 from common.db import make_db
-from common.options import username_option, color_option, limit_option
+from common.options import username_option, color_option, limit_option, piece_option
 
-def get_dest_square(move):
-    file = chr((move.to_square % 8) + ord('a'))
-    rank = (move.to_square // 8) + 1
-    square = file + str(rank)
-    return square
-
+def get_dest_square_coords(move):
+    file = move.to_square % 8
+    rank = move.to_square // 8
+    return (file, rank)
 
 def get_square_accuracy_for_game(db, pgn, username):
-    square_accuracy = {}
+    square_accuracy = {
+            piece_type: {
+                'sum': np.zeros((8,8)),
+                'len': np.zeros((8,8)) 
+            } for piece_type in PIECES
+        }
     move_accuracy = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
     if not move_accuracy:
         return {}
     game = read_game(StringIO(pgn))
     board = game.board()
     color = WHITE if game.headers['White'] == username else BLACK
-    for actual_move_idx, actual_move in enumerate(game.mainline_moves()):
+    for move_idx, move in enumerate(game.mainline_moves()):
         if board.turn != color:
-            board.push(actual_move)
+            board.push(move)
             continue
-        dest_square = get_dest_square(actual_move)
-        if dest_square not in square_accuracy:
-            square_accuracy[dest_square] = []
-        square_accuracy[dest_square] += [move_accuracy[actual_move_idx//2]]
-        board.push(actual_move)
+        dest_square_coords = get_dest_square_coords(move)
+        piece_type = get_piece_type(board, move)
+        square_accuracy[piece_type]['sum'][dest_square_coords] += move_accuracy[move_idx//2]
+        square_accuracy[piece_type]['len'][dest_square_coords] += 1
+        board.push(move)
     return square_accuracy
-
 
 def plot_results(accuracy_matrix, username, actual_game_count, color):
     plt.figure(figsize=(8, 8))
@@ -63,7 +70,6 @@ def plot_results(accuracy_matrix, username, actual_game_count, color):
     plt.gca().invert_yaxis()
     plt.show()
     
-    
 def square_coords_to_index(square):
     file, rank = square[0], int(square[1])
     file_index = ord(file) - ord('a')
@@ -72,6 +78,7 @@ def square_coords_to_index(square):
 
 def square_accuracy_to_matrix(square_accuracy):
     matrix = [[None] * 8 for _ in range(8)]
+    import ptpython; ptpython.embed(globals(), locals())
     for square, accuracies in square_accuracy.items():
         index = square_coords_to_index(square)
         row = index // 8
@@ -86,12 +93,20 @@ def fetch_running_accuracy_per_square_for_user(db, args):
         initialization = {
             'username': args.username,
             
-            'sum_white': np.zeros((8,8)),
-            'len_white': np.zeros((8,8)),
+            'sum_white': {
+                    piece_type: np.zeros((8,8)) for piece_type in PIECES
+                },
+            'len_white': {
+                    piece_type: np.zeros((8,8)) for piece_type in PIECES
+                },
             'games_white': [],
             
-            'sum_black': np.zeros((8,8)),
-            'len_black': np.zeros((8,8)),
+            'sum_black': {
+                    piece_type: np.zeros((8,8)) for piece_type in PIECES
+                },
+            'len_black': {
+                    piece_type: np.zeros((8,8)) for piece_type in PIECES
+                },
             'games_black': []
         }
         return initialization
@@ -112,8 +127,16 @@ def update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_s
         'username': args.username, 
         }, running_accuracy_per_square, upsert=True)
 
+def add_piece_matrices(sums, lens, pieces):
+    sum = np.zeros((8,8))
+    len = np.zeros((8,8))
+    for piece_name in pieces:
+        piece_type = get_piece_type_from_name(piece_name)
+        sum += sums[piece_type].copy()
+        len += lens[piece_type].copy()
+    return sum, len
+
 def run(args):
-    print(args.color)
     if not args.username:
         print('Username is required', file=sys.stderr)
     db = make_db()
@@ -130,26 +153,28 @@ def run(args):
         game_color = get_user_color_from_pgn(args.username, pgn)
         if args.color and args.color != game_color:
             continue
-        square_accuracies_for_game = get_square_accuracy_for_game(
-            db, pgn, args.username)
-        square_accuracy_matrix = square_accuracy_to_matrix(square_accuracies_for_game)
+        square_accuracies_per_piece = get_square_accuracy_for_game(db, pgn, args.username)
         game_color_string = color_as_string(game_color)
-        
-        running_accuracy_per_square[f'sum_{game_color_string}'] = running_accuracy_per_square[f'sum_{game_color_string}'].copy() + \
-            np.where(square_accuracy_matrix == None, 0, square_accuracy_matrix)
-        square_accuracy_matrix_len = np.vectorize(lambda v: 1 if v is not None else 0)(square_accuracy_matrix)
-        running_accuracy_per_square[f'len_{game_color_string}'] = running_accuracy_per_square[f'len_{game_color_string}'].copy() + square_accuracy_matrix_len
-        running_accuracy_per_square[f'games_{game_color_string}'] += [hexdigest]
+        for piece_type, square_accuracy_matrix in square_accuracies_per_piece.items():
+            running_accuracy_per_square[f'sum_{game_color_string}'][piece_type] = \
+                running_accuracy_per_square[f'sum_{game_color_string}'][piece_type].copy() + \
+                square_accuracy_matrix['sum']
+            running_accuracy_per_square[f'len_{game_color_string}'][piece_type] = \
+                running_accuracy_per_square[f'len_{game_color_string}'][piece_type].copy() + \
+                square_accuracy_matrix['len']
+            running_accuracy_per_square[f'games_{game_color_string}'] += [hexdigest]
     update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square)
     if args.color is not None:
         color_string = color_as_string(args.color)
-        sum = running_accuracy_per_square[f'sum_{color_string}']
-        len = running_accuracy_per_square[f'len_{color_string}']
+        sums = np.sum(running_accuracy_per_square[f'sum_{color_string}'].values())
+        lens = np.sum(running_accuracy_per_square[f'len_{color_string}'].values())
+        sum, len = add_piece_matrices(sums, lens, args.piece)
     else:
-        sum = running_accuracy_per_square['sum_white'] + \
-            running_accuracy_per_square['sum_black']
-        len = running_accuracy_per_square['len_white'] + \
-            running_accuracy_per_square['len_black']
+        sums = list(running_accuracy_per_square['sum_white'].values()) + \
+            list(running_accuracy_per_square['sum_black'].values())
+        lens = list(running_accuracy_per_square['len_white'].values()) + \
+            list(running_accuracy_per_square['len_black'].values())
+        sum, len = add_piece_matrices(sums, lens, args.piece)
     heatmap = (sum / len).tolist()
     return heatmap
 
@@ -159,8 +184,9 @@ def add_subparser(action_name, subparsers):
     username_option(move_accuracy_per_piece_parser)
     color_option(move_accuracy_per_piece_parser)
     limit_option(move_accuracy_per_piece_parser)
+    piece_option(move_accuracy_per_piece_parser)
     move_accuracy_per_piece_parser.add_argument(
-        '-p',
+        '-P',
         '--plot',
         action='store_true'
     )

@@ -6,13 +6,15 @@ from chess import WHITE, BLACK
 from chess.pgn import read_game
 from tqdm import tqdm
 
-from common.util import make_game_generator, fetch_move_accuracy_from_db, hash_pgn, count_user_games
+from common.util import (
+    make_game_generator, 
+    fetch_move_accuracy_from_db, 
+    hash_pgn, 
+    count_user_games, 
+    get_piece_repr
+)
 from common.db import make_db
 from common.options import username_option, color_option, limit_option
-
-def get_piece_type(board, move):
-    piece = re.sub('[^A-Z]', '', board.san(move))
-    return piece if piece else 'P'
 
 def get_piece_accuracy_for_game(db, pgn, username):
     piece_accuracy = {}
@@ -26,10 +28,10 @@ def get_piece_accuracy_for_game(db, pgn, username):
         if board.turn != color:
             board.push(actual_move)
             continue
-        piece_type = get_piece_type(board, actual_move)
-        if piece_type not in piece_accuracy:
-            piece_accuracy[piece_type] = []
-        piece_accuracy[piece_type] += [move_accuracy[actual_move_idx//2]]
+        piece_repr = get_piece_repr(board, actual_move)
+        if piece_repr not in piece_accuracy:
+            piece_accuracy[piece_repr] = []
+        piece_accuracy[piece_repr] += [move_accuracy[actual_move_idx//2]]
         board.push(actual_move)
     return piece_accuracy
 

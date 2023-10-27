@@ -5,7 +5,8 @@ import os
 
 DATA_DIR = appdirs.user_data_dir(appname='chess-playground')
 DEFAULT_CONFIG = {
-    "downloader-user-agent-username": "anonymous"
+    "downloader-user-agent-username": "anonymous",
+    "think-time-seconds": 0.001
 }
 
 if not op.exists(DATA_DIR):
@@ -25,4 +26,4 @@ def read_config():
 def write_default_config():
     json.dump(DEFAULT_CONFIG, open(get_config_file_path(), 'w'))
 
-config = read_config()
+config = {**DEFAULT_CONFIG, **read_config()}

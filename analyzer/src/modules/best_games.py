@@ -65,11 +65,11 @@ def run(args):
                     pop_future_user = partial(pop_future1, game_accuracies, False, hexdigest)
                     pop_future_opponent = partial(pop_future1, game_accuracies, True, hexdigest)
                     future_user = executor.submit(get_move_accuracy_for_game,
-                                             game,
+                                             pgn,
                                              username,
                                              args.remote_engine)
                     future_opponent = executor.submit(get_move_accuracy_for_game,
-                                             game,
+                                             pgn,
                                              other_user,
                                              args.remote_engine)
                     active_threads.add(future_user)
@@ -103,6 +103,7 @@ def add_subparser(action_name, subparsers):
         '-C',
         '--count',
         type=int,
+        default=10,
         help='returns this amount of top games'
     )
 

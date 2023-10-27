@@ -3,7 +3,6 @@ jobs:
   build:
     docker:
       - image: python:3.11
-      - image: mongo:latest
 
     working_directory: /app
 
@@ -19,16 +18,8 @@ jobs:
           command: pip install pytest
 
       - run:
-          name: Start MongoDB
-          command: docker run --name mongodb -d -p 27017:27017 mongo:latest
-
-      - run:
           name: Run Tests
           command: pytest
-
-      - run:
-          name: Stop MongoDB
-          command: docker stop mongodb
 
 workflows:
   version: 2

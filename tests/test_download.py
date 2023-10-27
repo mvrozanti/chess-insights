@@ -5,7 +5,7 @@ from src.modules.download import run
 class TestDownload(unittest.TestCase):
 
     @patch('src.modules.download.make_db')
-    def test_fetch_evaluation_from_db(self, mock_make_db):
+    def test_download(self, mock_make_db):
         mock_db = MagicMock()
         mock_games = MagicMock()
         mock_games.insert_one = MagicMock()
@@ -13,7 +13,7 @@ class TestDownload(unittest.TestCase):
         mock_make_db.return_value = mock_db
 
         from argparse import Namespace
-        args = Namespace(username='hikaru', months=12, limit=100)   
+        args = Namespace(username='hikaru', months=12, limit=100)
         
         run(args)
         

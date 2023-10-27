@@ -12,7 +12,7 @@ from common.util import get_game_datetime, hash_pgn
 from common.options import username_option, limit_option
 from common.config import config
 
-USER_AGENT = f'{config["downloader-user-agent-username"]}/chess-com-insights-at-home'
+USER_AGENT = f'{config["downloader-user-agent-username"]}/chess-insights'
 
 def download_month(username, year, month):
     formatted_month = f'0{month}' if month < 10 else month

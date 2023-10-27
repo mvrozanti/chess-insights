@@ -13,7 +13,7 @@ def add_module_subparsers(parser):
 
 if __name__ == '__main__':
     parser = ArgumentParser(
-        prog='analyzer', description='Chess Analyzer')
+        prog='chess-insights', description='Chess Insights')
     add_module_subparsers(parser)
     args = parser.parse_args()
     map_color_option(args)

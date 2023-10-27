@@ -1,3 +1,5 @@
+![CircleCI](https://img.shields.io/circleci/build/github/mvrozanti/chess-insights/master)
+
 ## Chess.com Features
 - [x] Games played
 - [x] Average accuracy
@@ -64,8 +66,8 @@
 
 - [x] Best matches (accuracy sum)
 
-## To do
+## General things to do
 - [ ] Add 960 support and filters
-- [ ] UT/Coverage/CI
+- [x] UT/Coverage/CI
 - [ ] Cache pgn/game mapping
 - [ ] Download 3-4-5 tables automatically

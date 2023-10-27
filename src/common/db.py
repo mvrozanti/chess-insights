@@ -1,7 +1,5 @@
-#!/usr/bin/env python
 from pymongo import TEXT
 from pymongo import MongoClient
-import re
 
 def __setup_db(db):
     db.games.create_index([
@@ -29,10 +27,9 @@ def __setup_db(db):
          ], unique = True)
 
 
-def make_db():
-    uri = 'mongodb://localhost:27017'
+def make_db(uri='mongodb://localhost:27017', db_name='analyzer'):
     client = MongoClient(uri)
-    db = client['analyzer']
+    db = client[db_name]
     __setup_db(db)
     return db
 

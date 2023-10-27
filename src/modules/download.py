@@ -40,13 +40,12 @@ def run(args):
     cursor_date = datetime.now() - relativedelta(months=1)
     username = args.username
     all_pgns = []
+    months_done = 0
     with tqdm() as pbar:
-        while True:
+        while months_done < args.months and len(all_pgns) < args.limit:
             year = cursor_date.year
             month = cursor_date.month
             pgns = download_month(username, year, month)
-            if not pgns:
-                break
             all_pgns.extend(pgns)
             for pgn in pgns:
                 game_document = {
@@ -59,9 +58,8 @@ def run(args):
                     db.games.insert_one(game_document)
                 except DuplicateKeyError:
                     continue
-            if args.limit and len(all_pgns) > args.limit:
-                return all_pgns
             cursor_date = cursor_date - relativedelta(months=1)
+            months_done += 1
             pbar.update(1)
     print(f'Downloaded {len(all_pgns)} games')
     return all_pgns
@@ -71,3 +69,10 @@ def add_subparser(action_name, subparsers):
         action_name, help='downloads games en masse off the chess.com public API')
     username_option(downloader_parser)
     limit_option(downloader_parser)
+    downloader_parser.add_argument(
+        '-m',
+        '--months',
+        default=12,
+        type=int,
+        help='how many years back to download (defaults to a year)'
+    )

@@ -4,3 +4,7 @@ tqdm
 flask
 flask-cors
 appdirs
+requests
+python-dateutil
+pytest-mock
+mongoengine

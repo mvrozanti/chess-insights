@@ -33,6 +33,7 @@ from .remote_engine import set_remote_available
 from .db import make_db, fetch_move_accuracy_from_db, fetch_evaluation_from_db
 
 PIECES = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING]
+PIECES_STR = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
 
 MODULES = list(
     map(lambda f: f[:-3],
@@ -41,6 +42,16 @@ MODULES = list(
             )
         )
     )
+
+def get_piece_name_from_type(piece_type: PieceType):
+    return {
+        PAWN: 'pawn',
+        KNIGHT: 'knight',
+        BISHOP: 'bishop',
+        ROOK: 'rook',
+        QUEEN: 'queen',
+        KING: 'king'
+    }[piece_type]
 
 def get_piece_type_from_name(piece_name: str) -> PieceType:
     return {
@@ -79,6 +90,11 @@ def map_color_option(args: Namespace) -> Namespace:
         args.color = BLACK
     if args.color == 'any':
         args.color = None
+    return args
+
+def map_pieces_option(args: Namespace) -> Namespace:
+    if not hasattr(args, 'pieces'):
+        args.pieces = PIECES
     return args
 
 def load_module(module: str) -> ModuleType:

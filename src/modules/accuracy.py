@@ -21,13 +21,6 @@ from common.options import (
     remote_engine_option
 )
 
-def update_running_accuracy(username, hexdigest, game_accuracy):
-    db.running_accuracy.insert_one({ 
-        'username': username, 
-        'hexdigest': hexdigest, 
-        'game_accuracy': game_accuracy
-        })
-
 def run(args):
     username = args.username
     if not username:

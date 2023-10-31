@@ -2,11 +2,13 @@ import sys
 from io import StringIO
 import pickle
 
-from chess import WHITE, BLACK
+from chess import WHITE, BLACK, PieceType, Move
 from chess.pgn import read_game
 from tqdm import tqdm
 import numpy as np
 from bson import Binary
+from pymongo.database import Database
+from argparse import Namespace
 
 from common.util import (
     make_game_generator,
@@ -16,18 +18,19 @@ from common.util import (
     color_as_string,
     get_user_color_from_pgn,
     get_piece_type,
+    get_piece_name_from_type,
     get_piece_type_from_name,
     PIECES
 )
 from common.db import make_db
-from common.options import username_option, color_option, limit_option, piece_option
+from common.options import username_option, color_option, limit_option, pieces_option
 
-def get_dest_square_coords(move):
+def get_dest_square_coords(move: Move) -> tuple[int, int]:
     file = move.to_square % 8
     rank = move.to_square // 8
     return (file, rank)
 
-def get_square_accuracy_for_game(db, pgn, username):
+def get_square_accuracy_for_game(db: Database, pgn: str, username: str) -> dict[PieceType]:
     square_accuracy = {
             piece_type: {
                 'sum': np.zeros((8,8)),
@@ -51,7 +54,7 @@ def get_square_accuracy_for_game(db, pgn, username):
         board.push(move)
     return square_accuracy
 
-def plot_results(accuracy_matrix, username, actual_game_count, color):
+def plot_results(accuracy_matrix: np.array, username: str, actual_game_count: int, color: bool) -> None:
     plt.figure(figsize=(8, 8))
     colors = [(1, 0, 0), (1, 0.5, 0.5), (1, 0.65, 0),
               (1, 1, 0), (0, 1, 0), (0, 1, 1)]
@@ -70,22 +73,13 @@ def plot_results(accuracy_matrix, username, actual_game_count, color):
     plt.gca().invert_yaxis()
     plt.show()
     
-def square_coords_to_index(square):
+def square_coords_to_index(square: str) -> int:
     file, rank = square[0], int(square[1])
     file_index = ord(file) - ord('a')
     rank_index = rank - 1
     return file_index + rank_index * 8
 
-def square_accuracy_to_matrix(square_accuracy):
-    matrix = [[None] * 8 for _ in range(8)]
-    for square, accuracies in square_accuracy.items():
-        index = square_coords_to_index(square)
-        row = index // 8
-        col = index % 8
-        matrix[row][col] = sum(accuracies) / len(accuracies)
-    return np.array(matrix)
-
-def fetch_running_accuracy_per_square_for_user(db, args):
+def fetch_running_accuracy_per_square_for_user(db: Database, args: Namespace) -> dict:
     _filter = { 'username': args.username }
     raw_running_accuracy_per_square = db.running_accuracy_per_square.find_one(_filter)
     if not raw_running_accuracy_per_square:
@@ -116,7 +110,7 @@ def fetch_running_accuracy_per_square_for_user(db, args):
     running_accuracy_per_square['len_black'] = pickle.loads(raw_running_accuracy_per_square['len_black'])
     return running_accuracy_per_square
 
-def update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square):
+def update_running_accuracy_per_square_for_user(db: Database, args: Namespace, running_accuracy_per_square: dict):
     running_accuracy_per_square = dict(running_accuracy_per_square)
     running_accuracy_per_square['sum_white'] = Binary(pickle.dumps(running_accuracy_per_square['sum_white']))
     running_accuracy_per_square['sum_black'] = Binary(pickle.dumps(running_accuracy_per_square['sum_black']))
@@ -126,7 +120,7 @@ def update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_s
         'username': args.username, 
         }, running_accuracy_per_square, upsert=True)
 
-def add_piece_matrices(sums, lens, pieces):
+def add_piece_matrices(sums: np.array, lens: np.array, pieces: str):
     sum = np.zeros((8,8))
     len = np.zeros((8,8))
     for piece_name in pieces:
@@ -135,7 +129,7 @@ def add_piece_matrices(sums, lens, pieces):
         len += lens[piece_type].copy()
     return sum, len
 
-def run(args):
+def run(args: Namespace):
     if not args.username:
         print('Username is required', file=sys.stderr)
     db = make_db()
@@ -166,27 +160,29 @@ def run(args):
     if args.color is not None:
         color_string = color_as_string(args.color)
         sum = np.zeros((8,8))
-        for pieceType, matrix  in running_accuracy_per_square[f'sum_{color_string}'].items():
-            sum += matrix
+        for piece_type, matrix  in running_accuracy_per_square[f'sum_{color_string}'].items():
+            if get_piece_name_from_type(piece_type) in args.pieces:
+                sum += matrix
         len = np.zeros((8,8))
-        for pieceType, matrix  in running_accuracy_per_square[f'len_{color_string}'].items():
-            len += matrix
+        for piece_type, matrix  in running_accuracy_per_square[f'len_{color_string}'].items():
+            if get_piece_name_from_type(piece_type) in args.pieces:
+                len += matrix
     else:
         sums = list(running_accuracy_per_square['sum_white'].values()) + \
             list(running_accuracy_per_square['sum_black'].values())
         lens = list(running_accuracy_per_square['len_white'].values()) + \
             list(running_accuracy_per_square['len_black'].values())
-        sum, len = add_piece_matrices(sums, lens, args.piece)
+        sum, len = add_piece_matrices(sums, lens, args.pieces)
     heatmap = np.where(len == 0, None, sum / len).tolist()
     return heatmap
 
-def add_subparser(action_name, subparsers):
+def add_subparser(action_name: str, subparsers):
     move_accuracy_per_piece_parser = subparsers.add_parser(
         action_name, help='calculates average accuracy per square')
     username_option(move_accuracy_per_piece_parser)
     color_option(move_accuracy_per_piece_parser)
     limit_option(move_accuracy_per_piece_parser)
-    piece_option(move_accuracy_per_piece_parser)
+    pieces_option(move_accuracy_per_piece_parser)
     move_accuracy_per_piece_parser.add_argument(
         '-P',
         '--plot',

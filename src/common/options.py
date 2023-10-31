@@ -1,4 +1,5 @@
 import sys
+from common.util import PIECES_STR
 
 def username_option(parser, required=True):
     parser.add_argument(
@@ -41,13 +42,12 @@ def remote_engine_option(parser):
         help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
     )
 
-def piece_option(parser):
-    choices = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
+def pieces_option(parser):
     parser.add_argument(
         '-p',
-        '--piece',
-        default=choices,
+        '--pieces',
+        default=PIECES_STR,
         nargs='*',
-        choices=choices,
+        choices=PIECES_STR,
         help='filters by piece'
     )

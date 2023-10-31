@@ -60,7 +60,7 @@ def run(args):
                     continue
             cursor_date = cursor_date - relativedelta(months=1)
             months_done += 1
-            pbr.set_description(f'{len(all_pgns)} downloaded')
+            pbar.set_description(f'{len(all_pgns)} downloaded')
             pbar.update(1)
     print(f'Downloaded {len(all_pgns)} games')
     return all_pgns

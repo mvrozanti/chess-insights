@@ -4,7 +4,7 @@ import json
 from flask import Flask, request, abort, jsonify, make_response # pylint: disable=W0611
 from flask_cors import CORS
 
-from common.util import load_module, MODULES, map_color_option
+from common.util import load_module, MODULES, map_color_option, map_pieces_option
 
 DEFAULT_SERVER_PORT = 5000
 
@@ -23,6 +23,9 @@ def run(super_args):
         subparsers = parser.add_subparsers(dest='command')
         module.add_subparser(module_name, subparsers)
         args = [module_name]
+        if super_args.verbose:
+            print('Request: ')
+            print(request.json)
         for k,v in request.json.items():
             if type(v) == list:
                 args += [f'--{k}'] + [str(e) for e in v]
@@ -30,6 +33,10 @@ def run(super_args):
                 args += [f'--{k}', str(v)]
         args = parser.parse_args(args)
         args = map_color_option(args)
+        args = map_pieces_option(args)
+        if super_args.verbose:
+            print('Parsed args:')
+            print(args)
         return module.run(args)
     CORS(app)
     app.run(port=super_args.port)
@@ -44,3 +51,10 @@ def add_subparser(action_name, subparsers):
         default=DEFAULT_SERVER_PORT,
         help='server port'
     )
+    server_parser.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help='whether to print request data'
+    )
+

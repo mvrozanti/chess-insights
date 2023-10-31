@@ -78,7 +78,6 @@ def square_coords_to_index(square):
 
 def square_accuracy_to_matrix(square_accuracy):
     matrix = [[None] * 8 for _ in range(8)]
-    import ptpython; ptpython.embed(globals(), locals())
     for square, accuracies in square_accuracy.items():
         index = square_coords_to_index(square)
         row = index // 8
@@ -166,16 +165,19 @@ def run(args):
     update_running_accuracy_per_square_for_user(db, args, running_accuracy_per_square)
     if args.color is not None:
         color_string = color_as_string(args.color)
-        sums = np.sum(running_accuracy_per_square[f'sum_{color_string}'].values())
-        lens = np.sum(running_accuracy_per_square[f'len_{color_string}'].values())
-        sum, len = add_piece_matrices(sums, lens, args.piece)
+        sum = np.zeros((8,8))
+        for pieceType, matrix  in running_accuracy_per_square[f'sum_{color_string}'].items():
+            sum += matrix
+        len = np.zeros((8,8))
+        for pieceType, matrix  in running_accuracy_per_square[f'len_{color_string}'].items():
+            len += matrix
     else:
         sums = list(running_accuracy_per_square['sum_white'].values()) + \
             list(running_accuracy_per_square['sum_black'].values())
         lens = list(running_accuracy_per_square['len_white'].values()) + \
             list(running_accuracy_per_square['len_black'].values())
         sum, len = add_piece_matrices(sums, lens, args.piece)
-    heatmap = (sum / len).tolist()
+    heatmap = np.where(len == 0, None, sum / len).tolist()
     return heatmap
 
 def add_subparser(action_name, subparsers):

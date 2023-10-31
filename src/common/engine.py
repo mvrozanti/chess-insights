@@ -3,7 +3,7 @@ from chess.engine import SimpleEngine, Limit
 from .remote_engine import make_remote, is_remote_available
 from .config import config
 
-def make_engine(remote=None):
+def make_engine(remote=None) -> SimpleEngine:
     if remote and is_remote_available():
         return make_remote(remote)
     engine = SimpleEngine.popen_uci('stockfish', setpgrp=True)

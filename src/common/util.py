@@ -5,12 +5,28 @@ from collections import OrderedDict
 import sys
 import os
 from importlib import import_module
+from argparse import Namespace
 import re
+from typing import Generator
+from types import ModuleType
 
-from chess import WHITE, BLACK, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
-from chess.pgn import read_game
-from chess.engine import INFO_SCORE, EngineTerminatedError
+from chess import (
+    WHITE,
+    BLACK,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
+    PieceType,
+    Board,
+    Move
+)
+from chess.pgn import read_game, Game
+from chess.engine import INFO_SCORE, EngineTerminatedError, SimpleEngine
 from chess.pgn import StringExporter
+from pymongo.database import Database
 
 from .engine import make_engine, limit
 from .remote_engine import set_remote_available
@@ -26,7 +42,7 @@ MODULES = list(
         )
     )
 
-def get_piece_type_from_name(piece_name):
+def get_piece_type_from_name(piece_name: str) -> PieceType:
     return {
         'pawn': PAWN,
         'knight': KNIGHT,
@@ -36,11 +52,11 @@ def get_piece_type_from_name(piece_name):
         'king': KING
     }[piece_name]
 
-def get_piece_repr(board, move):
+def get_piece_repr(board: Board, move: Move) -> str:
     piece = re.sub('[^A-Z]', '', board.san(move))
     return piece if piece else 'P'
 
-def get_piece_type(board, move):
+def get_piece_type(board, move) -> PieceType:
     piece_repr = get_piece_repr(board, move)
     return {
         'P': PAWN,
@@ -53,7 +69,7 @@ def get_piece_type(board, move):
         'OOO': KING,
     }[piece_repr]
 
-def map_color_option(args):
+def map_color_option(args: Namespace) -> Namespace:
     if not hasattr(args, 'color'):
         args.color = 'any'
         return args
@@ -65,10 +81,10 @@ def map_color_option(args):
         args.color = None
     return args
 
-def load_module(module):
+def load_module(module: str) -> ModuleType:
     return import_module(f'modules.{module}', 'src')
 
-def evaluate_move(board, engine, move):
+def evaluate_move(board: Board, engine: SimpleEngine, move: Move) -> float:
     info = engine.analyse(board, limit(), root_moves=[move], multipv=1, info=INFO_SCORE)
     relative_eval = info[0]['score'].relative
     if relative_eval.is_mate():
@@ -79,10 +95,10 @@ def evaluate_move(board, engine, move):
         value = relative_eval.cp
     return value
 
-def hash_pgn(pgn):
+def hash_pgn(pgn: str) -> str:
     return hashlib.md5(pgn.encode('utf-8')).hexdigest()
 
-def color_filter(username, color=None):
+def color_filter(username: str, color: bool = None) -> dict:
     _filter = {}
     if color == WHITE:
         _filter['pgn'] = {'$regex':f'.*White "{username}".*', '$options' : 'i'}
@@ -90,7 +106,7 @@ def color_filter(username, color=None):
         _filter['pgn'] = {'$regex':f'.*Black "{username}".*', '$options' : 'i'}
     return _filter
 
-def get_game_result(game, username):
+def get_game_result(game: Game, username: str) -> float:
     color = WHITE if game.headers['White'] == username else BLACK
     result = 0.5
     if game.headers['Result'] == '1-0':
@@ -101,27 +117,27 @@ def get_game_result(game, username):
         result = 0.5
     return result
 
-def string_as_color(string):
+def string_as_color(string: str) -> bool:
     if string.lower() == 'white':
         return WHITE
     if string.lower() == 'black':
         return BLACK
     raise ValueError()
 
-def color_as_string(color):
+def color_as_string(color: bool) -> str:
     if color is WHITE:
         return 'white'
     if color is BLACK:
         return 'black'
     raise ValueError()
 
-def count_user_games(db, args):
+def count_user_games(db: Database, args: Namespace) -> int:
     _filter = {'username': args.username}
     _filter.update(color_filter(args.username, args.color))
     document_count = db.games.count_documents(_filter)
     return document_count
 
-def make_game_generator(db, args):
+def make_game_generator(db: Database, args: Namespace) -> Generator[dict, None, None]:
     _filter = {'username': args.username}
     _filter.update(color_filter(args.username, args.color))
     cursor = db.games.find(_filter).batch_size(10)
@@ -133,7 +149,7 @@ def make_game_generator(db, args):
     finally:
         cursor.close()
 
-def get_move_accuracy_for_game(pgn, username, remote_engine):
+def get_move_accuracy_for_game(pgn: str, username: str, remote_engine: bool) -> list[float]:
     db = make_db()
     move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
     if move_accuracy_from_db:
@@ -169,7 +185,7 @@ def get_move_accuracy_for_game(pgn, username, remote_engine):
         set_remote_available(True)
     return move_accuracy
 
-def get_move_accuracy(db, board, engine, actual_move, pgn):
+def get_move_accuracy(db: Database, board: Board, engine: SimpleEngine, move: Move, pgn: str) -> float:
     moves = {}
     for legal_move in board.legal_moves:
         eval_from_db = fetch_evaluation_from_db(db, board.fen(), legal_move)
@@ -184,7 +200,7 @@ def get_move_accuracy(db, board, engine, actual_move, pgn):
                 'evalVersion': 1,
                 'gameHexdigest': hash_pgn(pgn)
             }
-        if eval_from_db is None and legal_move == actual_move:
+        if eval_from_db is None and legal_move == move:
             db.move_analyses.insert_one(move_analysis)
         if value not in moves:
             moves[value] = []
@@ -193,13 +209,13 @@ def get_move_accuracy(db, board, engine, actual_move, pgn):
     legal_move_count = len(ranked_moves)
     actual_move_rank = None
     for idx, moves in enumerate(ranked_moves.values()):
-        if actual_move in moves:
+        if move in moves:
             actual_move_rank = idx
             break
     raw_move_accuracy = (legal_move_count - actual_move_rank)/legal_move_count
     return raw_move_accuracy
 
-def get_game_datetime(pgn):
+def get_game_datetime(pgn: str) -> datetime:
     game = read_game(StringIO(pgn))
     game_date = game.headers['UTCDate']
     game_time = game.headers['UTCTime']
@@ -207,7 +223,7 @@ def get_game_datetime(pgn):
     game_datetime = datetime.strptime(f'{game_date} {game_time}', date_format)
     return game_datetime
 
-def get_user_color_from_pgn(username, pgn):
+def get_user_color_from_pgn(username: str, pgn: str) -> bool:
     match_white = re.match('.*White "(.+?)".*', pgn, re.DOTALL)
     match_black = re.match('.*Black "(.+?)".*', pgn, re.DOTALL)
     if match_white and match_white.group(1).lower() == username.lower():
@@ -216,5 +232,5 @@ def get_user_color_from_pgn(username, pgn):
         return BLACK
     raise ValueError(f'Unknown value: \n{pgn}')
 
-def get_user_color(username, game):
+def get_user_color(username: str, game: Game) -> bool:
     return WHITE if game.headers['White'] == username else BLACK

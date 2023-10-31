@@ -1,3 +1,5 @@
+import sys
+
 def username_option(parser, required=True):
     parser.add_argument(
         '-u',
@@ -19,6 +21,7 @@ def limit_option(parser):
         '-l',
         '--limit',
         type=int,
+        default=sys.maxsize,
         help='limit of games to handle'
     )
 

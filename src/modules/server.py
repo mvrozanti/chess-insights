@@ -10,6 +10,7 @@ DEFAULT_SERVER_PORT = 5000
 
 def run(super_args):
     app = Flask(__name__)
+    cache = {}
     @app.route('/')
     def healthcheck():
         return 'ayy'
@@ -37,7 +38,10 @@ def run(super_args):
         if super_args.verbose:
             print('Parsed args:')
             print(args)
-        return module.run(args)
+        frozen_args = frozenset(vars(args))
+        if frozen_args not in cache:
+            cache[frozen_args] = module.run(args)
+        return cache[frozen_args]
     CORS(app)
     app.run(port=super_args.port)
 

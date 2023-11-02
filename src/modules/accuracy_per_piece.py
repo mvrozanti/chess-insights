@@ -14,7 +14,14 @@ from common.util import (
     get_piece_repr
 )
 from common.db import make_db
-from common.options import username_option, color_option, limit_option
+from common.options import (
+    username_option, 
+    color_option, 
+    limit_option,
+    time_controls_option,
+    variant_option,
+    date_range_options
+)
 
 def get_piece_accuracy_for_game(db, pgn, username):
     piece_accuracy = {}
@@ -55,8 +62,11 @@ def run(args):
         print(f'{piece}: {accuracy*100:.2f}%')
 
 def add_subparser(action_name, subparsers):
-    move_accuracy_per_piece_parser = subparsers.add_parser(
+    parser = subparsers.add_parser(
         action_name, help='calculates average accuracy per piece for a user')
-    username_option(move_accuracy_per_piece_parser)
-    color_option(move_accuracy_per_piece_parser)
-    limit_option(move_accuracy_per_piece_parser)
+    username_option(parser)
+    color_option(parser)
+    limit_option(parser)
+    time_controls_option(parser)
+    date_range_options(parser)
+    variant_option(parser)

@@ -1,5 +1,6 @@
 import sys
 from common.util import PIECES_STR
+from datetime import datetime
 
 def username_option(parser, required=True):
     parser.add_argument(
@@ -50,4 +51,32 @@ def pieces_option(parser):
         nargs='*',
         choices=PIECES_STR,
         help='filters by piece'
+    )
+    
+def time_controls_option(parser):
+    parser.add_argument(
+        '--time-controls',
+        nargs='*',
+        help='filters by time control'
+    )    
+    
+def variant_option(parser):
+    parser.add_argument(
+        '-v',
+        '--variants',
+        help='filters by variant'
+    )
+    
+def date_range_options(parser):
+    parser.add_argument(
+        '--start-date',
+        default=datetime.min,
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d"), 
+        help="start date (YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        '--end-date', 
+        default=datetime.max,
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d"), 
+        help="end date (YYYY-MM-DD)"
     )

@@ -30,7 +30,8 @@ from pymongo.database import Database
 
 from .engine import make_engine, limit
 from .remote_engine import set_remote_available
-from .db import make_db, fetch_move_accuracy_from_db, fetch_evaluation_from_db
+from .db import make_db, fetch_move_accuracy_from_db, collation
+from .filters import merge_filters
 
 PIECES = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING]
 PIECES_STR = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
@@ -114,14 +115,6 @@ def evaluate_move(board: Board, engine: SimpleEngine, move: Move) -> float:
 def hash_pgn(pgn: str) -> str:
     return hashlib.md5(pgn.encode('utf-8')).hexdigest()
 
-def color_filter(username: str, color: bool = None) -> dict:
-    _filter = {}
-    if color == WHITE:
-        _filter['pgn'] = {'$regex':f'.*White "{username}".*', '$options' : 'i'}
-    elif color == BLACK:
-        _filter['pgn'] = {'$regex':f'.*Black "{username}".*', '$options' : 'i'}
-    return _filter
-
 def get_game_result(game: Game, username: str) -> float:
     color = WHITE if game.headers['White'] == username else BLACK
     result = 0.5
@@ -148,15 +141,13 @@ def color_as_string(color: bool) -> str:
     raise ValueError()
 
 def count_user_games(db: Database, args: Namespace) -> int:
-    _filter = {'username': args.username}
-    _filter.update(color_filter(args.username, args.color))
-    document_count = db.games.count_documents(_filter)
+    _filter = merge_filters(args)
+    document_count = db.games.count_documents(_filter, collation=collation())
     return document_count
 
 def make_game_generator(db: Database, args: Namespace) -> Generator[dict, None, None]:
-    _filter = {'username': args.username}
-    _filter.update(color_filter(args.username, args.color))
-    cursor = db.games.find(_filter).batch_size(10)
+    _filter = merge_filters(args)
+    cursor = db.games.find(_filter, collation=collation()).batch_size(10)
     if args.limit is not None:
         cursor = cursor.limit(args.limit)
     try:
@@ -167,7 +158,8 @@ def make_game_generator(db: Database, args: Namespace) -> Generator[dict, None, 
 
 def get_move_accuracy_for_game(pgn: str, username: str, remote_engine: bool) -> list[float]:
     db = make_db()
-    move_accuracy_from_db = fetch_move_accuracy_from_db(db, hash_pgn(pgn), username)
+    hexdigest = hash_pgn(pgn)
+    move_accuracy_from_db = fetch_move_accuracy_from_db(db, hexdigest, username)
     if move_accuracy_from_db:
         return move_accuracy_from_db
     engine, is_remote_engine = make_engine(remote=remote_engine)
@@ -190,11 +182,14 @@ def get_move_accuracy_for_game(pgn: str, username: str, remote_engine: bool) -> 
             elif is_remote_engine:
                 set_remote_available(True)
             return []
-    db.move_accuracy_pgn_username.insert_one({
-        'hexdigest': hash_pgn(pgn),
+    db.move_accuracy.insert_one({
+        'hexdigest': hexdigest,
         'username': username,
         'move_accuracy': move_accuracy
     })
+    result = db.games.update_one({'hexdigest': hexdigest}, {'$push': { 'tags': 'accuracy'}})
+    if result.modified_count != 1:
+        raise AttributeError(f'Game {hexdigest} was not updated')
     db.client.close()
     engine.close()
     if is_remote_engine:
@@ -204,20 +199,7 @@ def get_move_accuracy_for_game(pgn: str, username: str, remote_engine: bool) -> 
 def get_move_accuracy(db: Database, board: Board, engine: SimpleEngine, move: Move, pgn: str) -> float:
     moves = {}
     for legal_move in board.legal_moves:
-        eval_from_db = fetch_evaluation_from_db(db, board.fen(), legal_move)
-        if eval_from_db is not None:
-            value = eval_from_db['evaluation']
-        else:
-            value = evaluate_move(board, engine, legal_move)
-        move_analysis = {
-                'fen': board.fen(),
-                'move': legal_move.uci(),
-                'evaluation': value,
-                'evalVersion': 1,
-                'gameHexdigest': hash_pgn(pgn)
-            }
-        if eval_from_db is None and legal_move == move:
-            db.move_analyses.insert_one(move_analysis)
+        value = evaluate_move(board, engine, legal_move)
         if value not in moves:
             moves[value] = []
         moves[value].append(legal_move)
@@ -249,4 +231,8 @@ def get_user_color_from_pgn(username: str, pgn: str) -> bool:
     raise ValueError(f'Unknown value: \n{pgn}')
 
 def get_user_color(username: str, game: Game) -> bool:
-    return WHITE if game.headers['White'] == username else BLACK
+    if game.headers['White'] == username:
+        return WHITE
+    if game.headers['Black'] == username:
+        return BLACK
+    raise ValueError("Username doesn't match either color: ", username, game.headers['Link'])

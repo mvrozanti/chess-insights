@@ -1,9 +1,12 @@
 from datetime import datetime
 from base64 import b64decode
+from io import StringIO
+import re
 
 import requests
 from tqdm import tqdm
 from pymongo.errors import DuplicateKeyError
+from chess.pgn import read_game
 
 from dateutil.relativedelta import relativedelta
 
@@ -34,6 +37,10 @@ def download_month(username, year, month):
         pgns += [pgn]
     return pgns
 
+def get_chess_com_id(game):
+    match = re.search(r'\d+', game.headers['Link'])
+    return int(match.group())
+
 def run(args):
     db = make_db()
     username = args.username
@@ -48,11 +55,14 @@ def run(args):
             pgns = download_month(username, year, month)
             all_pgns.extend(pgns)
             for pgn in pgns:
+                game = read_game(StringIO(pgn))
                 game_document = {
+                        '_id': get_chess_com_id(game),
+                        'headers': dict(game.headers),
                         'pgn': pgn,
                         'when': get_game_datetime(pgn),
-                        'username': username,
-                        'hexdigest': hash_pgn(pgn)
+                        'hexdigest': hash_pgn(pgn),
+                        'tags': []
                         }
                 try:
                     db.games.insert_one(game_document)

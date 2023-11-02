@@ -65,7 +65,6 @@ def run(args):
         average_accuracy = sum(game_accuracies) / games_analyzed
         print(f'Games analyzed: {games_analyzed}')
         print(f'Average accuracy: {average_accuracy*100:.2f}%')
-        
         return average_accuracy
 
 

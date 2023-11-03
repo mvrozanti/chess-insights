@@ -156,13 +156,13 @@ def make_game_generator(db: Database, args: Namespace) -> Generator[dict, None, 
     finally:
         cursor.close()
 
-def get_move_accuracy_for_game(pgn: str, username: str, remote_engine: bool) -> list[float]:
+def get_move_accuracy_for_game(pgn: str, username: str) -> list[float]:
     db = make_db()
     hexdigest = hash_pgn(pgn)
     move_accuracy_from_db = fetch_move_accuracy_from_db(db, hexdigest, username)
     if move_accuracy_from_db:
         return move_accuracy_from_db
-    engine, is_remote_engine = make_engine(remote=remote_engine)
+    engine, remote = make_engine()
     move_accuracy = []
     game = read_game(StringIO(pgn))
     board = game.board()
@@ -179,21 +179,21 @@ def get_move_accuracy_for_game(pgn: str, username: str, remote_engine: bool) -> 
             if 'engine process died' not in str(e):
                 print(e)
                 sys.exit(1)
-            elif is_remote_engine:
-                set_remote_available(True)
+            elif remote:
+                set_remote_available(remote, True)
             return []
     db.move_accuracy.insert_one({
         'hexdigest': hexdigest,
         'username': username,
         'move_accuracy': move_accuracy
     })
-    result = db.games.update_one({'hexdigest': hexdigest}, {'$push': { 'tags': 'accuracy'}})
-    if result.modified_count != 1:
+    result = db.games.update_one({'hexdigest': hexdigest}, {'$addToSet': { 'tags': 'accuracy'}})
+    if result.modified_count != 1 and len(move_accuracy) > 0:
         raise AttributeError(f'Game {hexdigest} was not updated')
     db.client.close()
     engine.close()
-    if is_remote_engine:
-        set_remote_available(True)
+    if remote:
+        set_remote_available(remote, True)
     return move_accuracy
 
 def get_move_accuracy(db: Database, board: Board, engine: SimpleEngine, move: Move, pgn: str) -> float:

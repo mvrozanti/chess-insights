@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from chess import WHITE, BLACK
 
 from common.util import MODULES, load_module, map_color_option
+from common.remote_engine import add_remotes
 
 def add_module_subparsers(parser):
     subparsers = parser.add_subparsers(dest='command', required=True)
@@ -17,4 +18,6 @@ if __name__ == '__main__':
     add_module_subparsers(parser)
     args = parser.parse_args()
     map_color_option(args)
+    if hasattr(args, 'remote_engines'):
+        add_remotes(args.remote_engines)
     load_module(args.command).run(args)

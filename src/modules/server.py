@@ -7,13 +7,15 @@ from flask_cors import CORS
 from common.util import load_module, MODULES, map_color_option, map_pieces_option
 
 DEFAULT_SERVER_PORT = 5000
+cache = {}
 
 def run(super_args):
     app = Flask(__name__)
-    cache = {}
+
     @app.route('/')
     def healthcheck():
         return 'ayy'
+
     @app.route('/module/<string:module_name>', methods=['POST'])
     def run_module(module_name):
         try:
@@ -38,10 +40,11 @@ def run(super_args):
         if super_args.verbose:
             print('Parsed args:')
             print(args)
-        frozen_args = frozenset(vars(args))
-        if frozen_args not in cache:
-            cache[frozen_args] = module.run(args)
-        return cache[frozen_args]
+        serialized_args = json.dumps(vars(args), sort_keys=True, default=str)
+        if serialized_args not in cache:
+            cache[serialized_args] = module.run(args)
+        return cache[serialized_args]
+
     CORS(app)
     app.run(port=super_args.port)
 

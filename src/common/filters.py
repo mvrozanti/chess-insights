@@ -23,13 +23,13 @@ def date_filter(args: Namespace) -> dict:
 
 def time_control_filter(args: Namespace) -> dict:
     _filter = {}
-    if hasattr(args, 'time_controls'):
+    if hasattr(args, 'time_controls') and args.time_controls:
         _filter['headers.TimeControl'] = {'$in': args.time_controls}
     return _filter
 
 def variant_filter(args: Namespace) -> dict:
     _filter = {}
-    if hasattr(args, 'variants'):
+    if hasattr(args, 'variants') and args.variants:
         _filter['headers.Variant']  = {'$in': args.variants}
     return _filter
 

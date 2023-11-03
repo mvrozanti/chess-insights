@@ -36,10 +36,12 @@ def worker_count_option(parser):
         help='how many workers to have running concurrently'
     )
 
-def remote_engine_option(parser):
+def remote_engines_option(parser):
     parser.add_argument(
         '-r',
-        '--remote-engine',
+        '--remote-engines',
+        default=[],
+        nargs='*',
         help='use a remote engine in addition to local engines (format: USER@ADDRESS)'
     )
 
@@ -56,6 +58,7 @@ def pieces_option(parser):
 def time_controls_option(parser):
     parser.add_argument(
         '--time-controls',
+        default=[],
         nargs='*',
         help='filters by time control'
     )    
@@ -64,6 +67,7 @@ def variant_option(parser):
     parser.add_argument(
         '-v',
         '--variants',
+        default=[],
         help='filters by variant'
     )
     

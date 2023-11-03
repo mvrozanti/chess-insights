@@ -18,7 +18,7 @@ from common.options import (
     color_option,
     limit_option,
     worker_count_option,
-    remote_engine_option
+    remote_engines_option
 )
 
 def run(args):
@@ -49,8 +49,7 @@ def run(args):
                     pbar.set_description(f'Analyzing {hexdigest}')
                     future = executor.submit(get_move_accuracy_for_game,
                                              game_document['pgn'],
-                                             username,
-                                             args.remote_engine)
+                                             username)
                     active_threads.add(future)
                     future.add_done_callback(pop_future2)
                 except StopIteration:
@@ -75,4 +74,4 @@ def add_subparser(action_name, subparsers):
     color_option(average_accuracy_parser)
     limit_option(average_accuracy_parser)
     worker_count_option(average_accuracy_parser)
-    remote_engine_option(average_accuracy_parser)
+    remote_engines_option(average_accuracy_parser)

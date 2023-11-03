@@ -96,23 +96,33 @@ def run(args):
                     break
         while len(active_threads) > 0:
             time.sleep(0.1)
-        if not game_accuracies:
-            print(f'No games found in the database for {username}', file=sys.stderr)
-            return None
-        game_accuracies_filtered = {hexdigest: accuracies for hexdigest, accuracies in game_accuracies.items() if accuracies[True] and accuracies[False]}
-        game_accuracies_sorted = sorted(game_accuracies_filtered.items(), key=lambda item: item[1][BLACK] + item[1][WHITE], reverse=True)
-        complete_games_by_accuracy = []
-        for idx, (hexdigest, accuracies) in enumerate(game_accuracies_sorted[:args.count]):
-            game_document = fetch_game_from_db(db, hexdigest)
-            game_accuracy = (game_document['white_accuracy'] + game_document['black_accuracy'])/2
-            complete_games_by_accuracy.append({
-                'link': game_document['headers']['Link'],
-                'pgn': game_document['pgn'],
-                'when': game_document['when'],
-                'accuracy': game_accuracy,
-            })
-        db.client.close()
-        return complete_games_by_accuracy
+    results = db.games.aggregate([
+        {
+            "$project": {
+                "_id": 1,
+                "white_accuracy": 1,
+                "black_accuracy": 1,
+                "accuracy": {"$avg": ["$white_accuracy", "$black_accuracy"]},
+                "when": 1,
+                "headers.Link": 1,
+            }
+        },
+        {
+            "$sort": {"accuracy": -1}
+        },
+        {
+            "$limit": args.count
+        }
+    ])
+    complete_games_by_accuracy = []
+    for projection in results:
+        complete_games_by_accuracy.append({
+            'link': projection['headers']['Link'],
+            'when': projection['when'],
+            'accuracy': projection['accuracy']
+        })
+    db.client.close()
+    return complete_games_by_accuracy
 
 def add_subparser(action_name, subparsers):
     parser = subparsers.add_parser(action_name, help="returns the user's best games")

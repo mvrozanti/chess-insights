@@ -147,6 +147,7 @@ def count_user_games(db: Database, args: Namespace) -> int:
 
 def make_game_generator(db: Database, args: Namespace) -> Generator[dict, None, None]:
     _filter = merge_filters(args)
+    _filter.update({'invalid': { '$exists': False }})
     cursor = db.games.find(_filter, collation=collation()).batch_size(10)
     if args.limit is not None:
         cursor = cursor.limit(args.limit)
@@ -176,6 +177,7 @@ def get_move_accuracy_for_game(pgn: str, username: str) -> list[float]:
             move_accuracy.append(raw_move_accuracy)
             board.push(actual_move)
         except EngineTerminatedError as e:
+            db.games.update_one({'hexdigest': hexdigest}, {"$set": { 'invalid': True }})
             if 'engine process died' not in str(e):
                 print(e)
                 sys.exit(1)

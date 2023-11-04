@@ -118,7 +118,7 @@ def run(args):
     for projection in results:
         complete_games_by_accuracy.append({
             'link': projection['headers']['Link'],
-            'when': projection['when'],
+            'when': projection['when'].timestamp(),
             'accuracy': projection['accuracy']
         })
     db.client.close()
